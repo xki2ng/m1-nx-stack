@@ -665,14 +665,16 @@
   }
 
   function startCmdLoop() {
-    if(!cmdVelTopic)cmdVelTopic=new ROSLIB.Topic({ros,name:'/cmd_vel',messageType:'geometry_msgs/Twist'});
+    if(!cmdVelTopic)cmdVelTopic=new ROSLIB.Topic({ros,name:'/cmd_vel',messageType:'geometry_msgs/Twist',throttle_rate:20});
     if(cmdInterval)clearInterval(cmdInterval);
     cmdInterval=setInterval(()=>{
       if(!ros||!ros.isConnected)return;
       var needPub=false;
-      if(activeBtn){applyBtnVel();needPub=true;}
-      else if(Date.now()-lastCmdTime>DEADMAN_MS&&(vx!==0||vy!==0||wz!==0)){vx=vy=wz=0;needPub=true;}
-      if(needPub)try{cmdVelTopic.publish({linear:{x:vy,y:vx,z:0},angular:{x:0,y:0,z:wz}});}catch(e){}
+      if(activeBtn)applyBtnVel();
+      var deadman=Date.now()-lastCmdTime>DEADMAN_MS;
+      if(deadman&&!activeBtn){vx=vy=wz=0;}
+      if(vx!==0||vy!==0||wz!==0){needPub=true;}
+      if(needPub)try{cmdVelTopic.publish({linear:{x:vy,y:vx,z:0},angular:{x:0,y:0,z:wz}});}catch(e){console.error('pub err:',e);}
       updateVelDisplay();
     },20);
   }
