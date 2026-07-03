@@ -1011,7 +1011,7 @@ public:
         pubOdomAftMapped_ = this->create_publisher<nav_msgs::msg::Odometry>("/Odometry", 20);
         pubPath_ = this->create_publisher<nav_msgs::msg::Path>("/path", 20);
         sub_initialpose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-            "/initialpose", 10,
+            "/initialpose", rclcpp::QoS(1).best_effort(),
             [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
                 state_point.pos(0) = msg->pose.pose.position.x;
                 state_point.pos(1) = msg->pose.pose.position.y;
@@ -1024,19 +1024,20 @@ public:
             });
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     static_tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
-    geometry_msgs::msg::TransformStamped map_to_camera;
-    map_to_camera.header.stamp = this->now();
-    map_to_camera.header.frame_id = map_frame_id;
-    map_to_camera.child_frame_id = odom_frame_id;
-    map_to_camera.transform.translation.x = 0.0;
-    map_to_camera.transform.translation.y = 0.0;
-    map_to_camera.transform.translation.z = 0.0;
-    map_to_camera.transform.rotation.x = 0.0;
-    map_to_camera.transform.rotation.y = 0.0;
-    map_to_camera.transform.rotation.z = 0.0;
-    map_to_camera.transform.rotation.w = 1.0;
-    static_tf_broadcaster_->sendTransform(map_to_camera);
-
+    // map->odom: 初始位姿可通过 /initialpose 动态调整
+    geometry_msgs::msg::TransformStamped map_to_odom;
+    map_to_odom.header.stamp = this->now();
+    map_to_odom.header.frame_id = map_frame_id;
+    map_to_odom.child_frame_id = odom_frame_id;
+    map_to_odom.transform.translation.x = 0.0;
+    map_to_odom.transform.translation.y = 0.0;
+    map_to_odom.transform.translation.z = 0.0;
+    map_to_odom.transform.rotation.x = 0.0;
+    map_to_odom.transform.rotation.y = 0.0;
+    map_to_odom.transform.rotation.z = 0.0;
+    map_to_odom.transform.rotation.w = 1.0;
+    static_tf_broadcaster_->sendTransform(map_to_odom);
+    
     // imu_link -> body: body is 0.404m behind IMU (LiDAR mount offset)
     geometry_msgs::msg::TransformStamped imu_to_body;
     imu_to_body.header.stamp = this->now();

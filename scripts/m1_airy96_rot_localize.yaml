@@ -50,5 +50,5 @@
         pcd_save:
             pcd_save_en: true
             interval: 100
-        map_file_path: ""
-        localization_mode: false
+        map_file_path: "/home/robot/webui/data/maps/map_B104-PCD-NEW-2.pcd"
+        localization_mode: true

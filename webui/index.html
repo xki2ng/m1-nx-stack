@@ -607,6 +607,8 @@
                 </div>
                 <div class="d-flex gap-1 flex-wrap mb-2">
                   <button class="btn btn-outline-info btn-sm flex-grow-1" onclick="loadMapLocalize()" id="btn-map-load-loc" style="font-size:var(--fs-xs)" disabled>📍 加载地图（不建图）</button>
+                  <button class="btn btn-success btn-sm flex-grow-1" onclick="ctrlAPI('/service/fastlio_localize/start')" id="btn-start-localize" style="font-size:var(--fs-xs);display:none">启动</button>
+                  <button class="btn btn-outline-danger btn-sm flex-grow-1" onclick="ctrlAPI('/service/fastlio/stop')" id="btn-stop-localize" style="font-size:var(--fs-xs);display:none">停止</button>
                 </div>
                 <div class="d-flex gap-1 flex-wrap mb-2">
                   <input type="text" class="form-control form-control-sm" id="map-save-name" placeholder="输入地图名称（可选）" style="font-size:var(--fs-xs)">
@@ -1529,7 +1531,9 @@ function loadMapLocalize(){
   if(flRunning){alert('请先停止 FAST-LIO');return;}
   if(!confirm('加载地图: '+sel.value+'? 地图载入后用于定位，不更新地图。'))return;
   fetch(CTRL_HOST+'/map/load?name='+encodeURIComponent(sel.value),{method:'POST'}).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){alert('地图已加载，请点击 START FAST-LIO');}
+    if(d.ok){alert('地图已加载');document.getElementById('btn-start-localize').style.display='';
+             document.getElementById('btn-start-localize').disabled=false;
+             document.getElementById('btn-stop-localize').style.display='';}
     else{alert('失败: '+(d.error||''));}
   });
 }

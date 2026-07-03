@@ -36,11 +36,14 @@ try:
     n = msg.width * msg.height
     data = msg.data
     ox, oy, oz = fields['x'], fields['y'], fields['z']
+    oi = fields.get('intensity', oz)
 
     lines = [
         "# .PCD v0.7", "VERSION 0.7",
-        "FIELDS x y z", "SIZE 4 4 4",
-        "TYPE F F F", "COUNT 1 1 1",
+        "FIELDS x y z intensity normal_x normal_y normal_z curvature",
+        "SIZE 4 4 4 4 4 4 4 4",
+        "TYPE F F F F F F F F",
+        "COUNT 1 1 1 1 1 1 1 1",
         f"WIDTH {n}", "HEIGHT 1",
         "VIEWPOINT 0 0 0 1 0 0 0",
         f"POINTS {n}", "DATA ascii",
@@ -50,7 +53,8 @@ try:
         x = struct.unpack_from('f', data, base + ox)[0]
         y = struct.unpack_from('f', data, base + oy)[0]
         z = struct.unpack_from('f', data, base + oz)[0]
-        lines.append(f"{x:.4f} {y:.4f} {z:.4f}")
+        intensity = struct.unpack_from('f', data, base + oi)[0] if 'intensity' in fields else 0.0
+        lines.append(f"{x:.4f} {y:.4f} {z:.4f} {intensity:.1f} 0.0 0.0 0.0 0.0")
 
     with open(pcd_path, 'w') as f:
         f.write('\n'.join(lines) + '\n')

@@ -267,14 +267,12 @@ def load_map(name):
     if not os.path.exists(pcd_path):
         return False, "PCD 文件未找到，请重新保存该地图"
 
-    yaml_path = os.path.expanduser("~/fastlio/m1_airy96_rot.yaml")
+    yaml_path = os.path.expanduser("~/fastlio/m1_airy96_rot_localize.yaml")
     lines = []
     with open(yaml_path) as f:
         for line in f:
             if line.strip().startswith("map_file_path:"):
                 lines.append(f'        map_file_path: "{pcd_path}"\n')
-            elif line.strip().startswith("localization_mode:"):
-                lines.append("        localization_mode: true\n")
             else:
                 lines.append(line)
     with open(yaml_path, "w") as f:
@@ -398,6 +396,14 @@ class Handler(BaseHTTPRequestHandler):
             start_fastlio(); self._json(get_all_status())
         elif path == "/service/fastlio/stop":
             stop_fastlio(); self._json(get_all_status())
+        elif path == "/service/fastlio_localize/start":
+            subprocess.run(["pkill", "-9", "-f", "fastlio_mapping"], capture_output=True)
+            time.sleep(1)
+            subprocess.Popen(
+                ["bash", "-c",
+                 "source /opt/runtime/env.bash && source ~/m1_ws/install/setup.bash && /home/robot/m1_ws/install/fast_lio/lib/fast_lio/fastlio_mapping --ros-args --params-file ~/fastlio/m1_airy96_rot_localize.yaml"],
+                preexec_fn=os.setpgrp)
+            self._json(get_all_status())
         elif path == "/service/nvblox/start":
             start_nvblox(); self._json(get_all_status())
         elif path == "/service/nvblox/stop":
