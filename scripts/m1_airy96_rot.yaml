@@ -7,7 +7,6 @@
         filter_size_map: 0.3
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
-        map_file_path: "./test.pcd"
 
         common:
             lid_topic:  "/front_lidar/filtered"
@@ -50,6 +49,6 @@
 
         pcd_save:
             pcd_save_en: true
-            interval: -1
-        map_file_path: ""
-        localization_mode: false
+            interval: 100
+        map_file_path: "/home/robot/webui/data/maps/map_B104-PCD-NEW-1.pcd"
+        localization_mode: true
