@@ -61,6 +61,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #ifdef FASTLIO_HAS_LIVOX
 #include <livox_ros_driver2/msg/custom_msg.hpp>
@@ -1009,6 +1010,18 @@ public:
         pubLaserCloudMap_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/Laser_map", 20);
         pubOdomAftMapped_ = this->create_publisher<nav_msgs::msg::Odometry>("/Odometry", 20);
         pubPath_ = this->create_publisher<nav_msgs::msg::Path>("/path", 20);
+        auto sub_initialpose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+            "/initialpose", 10,
+            [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+                state_point.pos(0) = msg->pose.pose.position.x;
+                state_point.pos(1) = msg->pose.pose.position.y;
+                state_point.pos(2) = msg->pose.pose.position.z;
+                Eigen::Quaterniond q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
+                                     msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
+                state_point.rot = q.toRotationMatrix();
+                RCLCPP_INFO(this->get_logger(), "Initial pose set: %.2f %.2f %.2f",
+                            msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
+            });
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     static_tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
     geometry_msgs::msg::TransformStamped map_to_camera;

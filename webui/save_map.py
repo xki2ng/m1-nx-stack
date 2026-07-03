@@ -1,33 +1,60 @@
 #!/usr/bin/env python3
-"""独立地图保存脚本 — ros2 bag record"""
-import subprocess, json, os, time, sys
+"""地图保存 — rclpy 订阅 /Laser_map 一帧保存 PCD"""
+import os, time, sys, json, struct
 
 MAP_DIR = os.path.expanduser("~/webui/data/maps")
 os.makedirs(MAP_DIR, exist_ok=True)
-
 ts = os.environ.get("MAP_NAME", "").strip() or time.strftime("%Y%m%d_%H%M%S")
 name = f"map_{ts}"
-bag_path = os.path.join(MAP_DIR, name)
+pcd_path = os.path.join(MAP_DIR, f"{name}.pcd")
 
-# 用 bash -c source 确保完整 ROS2 环境
-cmd = f"source /opt/runtime/env.bash && ros2 bag record -o {bag_path} /Laser_map --max-bag-duration 2"
 try:
-    subprocess.run(["bash", "-c", cmd], timeout=15)
-except subprocess.TimeoutExpired:
-    pass
+    sys.path.insert(0, '/opt/ros/humble/lib/python3.10/site-packages')
+    import rclpy
+    from sensor_msgs.msg import PointCloud2
+    rclpy.init(args=[])
+    node = rclpy.create_node('pcd_saver')
+    latest = [None]
 
-# 检查结果
-ok = False
-if os.path.isdir(bag_path):
-    if any(f.endswith('.db3') for f in os.listdir(bag_path)):
-        ok = True
-        # 也复制 pcd（如果 FAST-LIO pcd_save_en 开启）
-        pcd_path = os.path.expanduser("~/map.pcd")
-        if os.path.exists(pcd_path):
-            import shutil
-            shutil.copy(pcd_path, os.path.join(MAP_DIR, f"{name}.pcd"))
+    def cb(msg):
+        latest[0] = msg
 
-if ok:
+    node.create_subscription(PointCloud2, '/Laser_map', cb, 10)
+    deadline = time.time() + 5.0
+    while time.time() < deadline and latest[0] is None:
+        rclpy.spin_once(node, timeout_sec=0.1)
+
+    node.destroy_node()
+
+    msg = latest[0]
+    if msg is None:
+        print(json.dumps({"ok": False, "error": "no /Laser_map data"}))
+        sys.exit(1)
+
+    fields = {f.name: f.offset for f in msg.fields}
+    ps = msg.point_step
+    n = msg.width * msg.height
+    data = msg.data
+    ox, oy, oz = fields['x'], fields['y'], fields['z']
+
+    lines = [
+        "# .PCD v0.7", "VERSION 0.7",
+        "FIELDS x y z", "SIZE 4 4 4",
+        "TYPE F F F", "COUNT 1 1 1",
+        f"WIDTH {n}", "HEIGHT 1",
+        "VIEWPOINT 0 0 0 1 0 0 0",
+        f"POINTS {n}", "DATA ascii",
+    ]
+    for i in range(n):
+        base = i * ps
+        x = struct.unpack_from('f', data, base + ox)[0]
+        y = struct.unpack_from('f', data, base + oy)[0]
+        z = struct.unpack_from('f', data, base + oz)[0]
+        lines.append(f"{x:.4f} {y:.4f} {z:.4f}")
+
+    with open(pcd_path, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
     print(json.dumps({"ok": True, "name": name}))
-else:
-    print(json.dumps({"ok": False, "error": "bag record failed"}))
+
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
