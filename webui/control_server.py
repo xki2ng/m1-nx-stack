@@ -347,16 +347,37 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": delete_trajectory(name)})
 
         # ── 服务控制 ──
+        elif path == "/service/rb_ctrl/start":
+            # 清残留
+            subprocess.run(["pkill", "-9", "-f", "rosbridge_websocket"], capture_output=True)
+            subprocess.run(["pkill", "-9", "-f", "m1_full_controller"], capture_output=True)
+            time.sleep(1)
+            # 启动 rosbridge
+            subprocess.Popen(
+                ["bash", "-c",
+                 "export PATH=/usr/bin:$PATH && source /opt/runtime/env.bash && source ~/m1_ws/install/setup.bash && ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9091"],
+                preexec_fn=os.setpgrp)
+            time.sleep(2)
+            # 启动 controller
+            subprocess.Popen(
+                ["bash", "-c",
+                 "source /opt/runtime/env.bash && source ~/m1_ws/install/setup.bash && export LD_LIBRARY_PATH=~/genisom_robot_sdk/lib/aarch64:$LD_LIBRARY_PATH && /home/robot/m1_ws/install/m1_sdk_controller/lib/m1_sdk_controller/m1_full_controller --ros-args --params-file ~/m1_ws/src/m1_sdk_controller/config/m1_sdk_controller.yaml"],
+                preexec_fn=os.setpgrp)
+            self._json(get_all_status())
+        elif path == "/service/rb_ctrl/stop":
+            subprocess.run(["pkill", "-9", "-f", "rosbridge_websocket"], capture_output=True)
+            subprocess.run(["pkill", "-9", "-f", "m1_full_controller"], capture_output=True)
+            self._json(get_all_status())
         elif path == "/service/voxel/start":
-            start_voxel(); self._json({"ok":True})
+            start_voxel(); self._json(get_all_status())
         elif path == "/service/voxel/stop":
-            stop_voxel(); self._json({"ok":True})
+            stop_voxel(); self._json(get_all_status())
         elif path == "/service/fastlio/start":
-            start_fastlio(); self._json({"ok":True})
+            start_fastlio(); self._json(get_all_status())
         elif path == "/service/fastlio/stop":
-            stop_fastlio(); self._json({"ok":True})
+            stop_fastlio(); self._json(get_all_status())
         elif path == "/service/nvblox/start":
-            start_nvblox(); self._json({"ok":True})
+            start_nvblox(); self._json(get_all_status())
         elif path == "/service/nvblox/stop":
             stop_nvblox(); self._json({"ok":True})
 

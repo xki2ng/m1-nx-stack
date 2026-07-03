@@ -261,13 +261,11 @@
                   <span class="opacity-50" id="proc-controller" style="font-size:var(--fs-xs)">controller: --</span>
                 </div>
                 <div class="d-flex gap-1 mb-1">
-                  <button class="btn btn-outline-primary btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="callSrv('/take_control')">夺取控制</button>
-                  <button class="btn btn-outline-secondary btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="callSrv('/release_control')">释放控制</button>
+                  <button class="btn btn-outline-success btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/rb_ctrl/start')">START rosbridge+controller</button>
+                  <button class="btn btn-outline-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/rb_ctrl/stop')">STOP rosbridge+controller</button>
                 </div>
-                <div class="d-flex gap-1">
-                  <button class="btn btn-success btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/start')">全部启动</button>
-                  <button class="btn btn-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/stop')">全部停止</button>
-                  <button class="btn btn-warning btn-sm flex-grow-1" style="font-size:var(--fs-xs);color:#000" onclick="ctrlAPI('/restart')">全部重启</button>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="btn btn-outline-primary btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="callSrv('/take_control')">夺取控制</button>
                 </div>
                 <hr class="my-2" style="border-color:rgba(255,255,255,.08)">
                 <!-- ═══ 建图状态 ═══ -->
@@ -877,9 +875,9 @@
     const rb=data.rosbridge?.running||false,ct=data.controller?.running||false,wb=data.webui?.running||false;
     document.getElementById('proc-rosbridge').textContent=`rosbridge: ${rb?'✅':'❌'}`;
     document.getElementById('proc-controller').textContent=`controller: ${ct?'✅':'❌'}`;
-    const all=rb&&ct&&wb,badge=document.getElementById('proc-status-badge');
-    badge.textContent=all?'全部运行':(rb||ct||wb)?'部分运行':'已停止';
-    badge.style.background=all?'var(--m1-success)':(rb||ct||wb)?'var(--m1-warning)':'var(--m1-danger)';
+    const all=rb&&ct,badge=document.getElementById('proc-status-badge');
+    badge.textContent=all?'全部运行':(rb||ct)?'部分运行':'已停止';
+    badge.style.background=all?'var(--m1-success)':(rb||ct)?'var(--m1-warning)':'var(--m1-danger)';
     // 建图状态
     const fl=data['fastlio']?.running||false, nv=data['nvblox']?.running||false;
     const zh=data['zenoh']?.running||false;
