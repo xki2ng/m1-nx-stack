@@ -1,0 +1,26 @@
+[Unit]
+Description=M1 FAST-LIO SLAM (domain 66, local NX)
+After=robot-launch.service
+Wants=robot-launch.service
+
+[Service]
+Type=simple
+User=robot
+Environment="RMW_IMPLEMENTATION=rmw_zenoh_cpp"
+Environment="ROS_DOMAIN_ID=66"
+Environment="ROS_LOCALHOST_ONLY=0"
+Environment="ZENOH_SESSION_CONFIG_URI=/home/robot/fastlio/zenoh_nx_client.json5"
+
+# Kill leftover processes before starting
+ExecStartPre=/bin/bash -c 'echo 1 | sudo -S pkill -9 -f "localization_zg|arc_lvio|arc_mapping|arc_state_machine|navigo_charging" 2>/dev/null; sleep 1'
+ExecStartPre=/bin/bash -c 'echo 1 | sudo -S killall -9 fastlio_mapping 2>/dev/null; sleep 1'
+ExecStart=/bin/bash /home/robot/fastlio/m1_full_stack.sh start
+ExecStop=/bin/bash /home/robot/fastlio/m1_full_stack.sh stop
+
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/robot/fastlio/service.log
+StandardError=append:/home/robot/fastlio/service.log
+
+[Install]
+WantedBy=multi-user.target

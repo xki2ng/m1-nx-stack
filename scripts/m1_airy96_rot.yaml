@@ -1,0 +1,53 @@
+/**:
+    ros__parameters:
+        feature_extract_enable: false
+        point_filter_num: 1
+        max_iteration: 4
+        filter_size_surf: 0.3
+        filter_size_map: 0.3
+        cube_side_length: 1000.0
+        runtime_pos_log_enable: false
+        map_file_path: "./test.pcd"
+
+        common:
+            lid_topic:  "/front_lidar/filtered"
+            imu_topic:  "/front_lidar/imu"
+            time_sync_en: false
+            time_offset_lidar_to_imu: 0.0   # both ROS time from converter, no offset needed
+            scan_rate: 10
+            
+        preprocess:
+            lidar_type: 5                # 5 for RoboSense Airy96 (no Livox SDK)
+            scan_line: 96
+            timestamp_unit: 0            # 0=second (point timestamps are in seconds)
+            blind: 0.0
+
+        mapping:
+            acc_cov: 0.2
+            gyr_cov: 0.5
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.01
+            fov_degree:    360.0
+            det_range:     200.0
+            extrinsic_est_en:  false
+            extrinsic_T: [0.0, 0.0, 0.0]
+            # R_y(90°): LiDAR frame → body (X←Z, Y=Y, Z←-X)
+            extrinsic_R: [0., 0., 1.,
+                         0., 1., 0.,
+                         -1.,0., 0.]
+
+        frames:
+            map_frame:   "map"
+            odom_frame:  "odom"
+            body_frame:  "imu_link"
+
+        publish:
+            map_en:  true
+            path_en:  false
+            scan_publish_en:  true
+            dense_publish_en: true
+            scan_bodyframe_pub_en: true
+
+        pcd_save:
+            pcd_save_en: true
+            interval: -1

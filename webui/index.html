@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-coreui-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>M1 铜锤 · 控制中心 v30d</title>
+  <link rel="stylesheet" href="vendor/simplebar.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/coreui.min.css">
+  <link rel="stylesheet" href="vendor/coreui-icons.min.css">
+  <script>window._AMapSecurityConfig={securityJsCode:'b7843fc3d32249d2f7610fff687514eb'};</script>
+
+  <style>
+    :root {
+      --m1-accent: #3b82f6;
+      --m1-danger: #ef4444;
+      --m1-success: #22c55e;
+      --m1-warning: #f59e0b;
+      --dpad-size: 56px;
+      --dpad-gap: 6px;
+      --fs-base: .82rem;
+      --fs-sm: .72rem;
+      --fs-xs: .65rem;
+    }
+
+    /* ── Mobile scale ── */
+    @media (max-width: 576px) {
+      :root { --dpad-size: 62px; --dpad-gap: 5px; --fs-base: .88rem; --fs-sm: .78rem; --fs-xs: .7rem; }
+    }
+
+    * { -webkit-tap-highlight-color: transparent; }
+
+    /* ── Connection LED ── */
+    .conn-led { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .conn-led.online  { background: var(--m1-success); box-shadow: 0 0 6px var(--m1-success); }
+    .conn-led.offline { background: var(--m1-danger); box-shadow: 0 0 6px var(--m1-danger); }
+
+    /* ── D-PAD ── */
+    .dpad-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .dpad-row { display: flex; justify-content: center; gap: var(--dpad-gap); }
+    .dpad-btn {
+      width: var(--dpad-size); height: var(--dpad-size); border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.15); background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.7); font-size: 1.2rem; cursor: pointer;
+      transition: all .12s ease; position: relative; display: flex;
+      align-items: center; justify-content: center; user-select: none;
+      touch-action: manipulation; -webkit-touch-callout: none;
+    }
+    .dpad-btn:active, .dpad-btn.pressed {
+      background: var(--m1-accent); border-color: var(--m1-accent);
+      color: #fff; box-shadow: 0 0 18px rgba(59,130,246,.5); transform: scale(1.06);
+    }
+    .dpad-stop {
+      width: var(--dpad-size); height: var(--dpad-size); border-radius: 50%;
+      border: 2px solid rgba(239,68,68,.35); background: rgba(239,68,68,.08);
+      color: var(--m1-danger); font-size: 1.1rem; cursor: pointer;
+      transition: all .12s ease; position: relative; display: flex;
+      align-items: center; justify-content: center; user-select: none;
+      touch-action: manipulation; -webkit-touch-callout: none;
+    }
+    .dpad-stop:active { background: var(--m1-danger); color: #fff; box-shadow: 0 0 18px rgba(239,68,68,.5); }
+
+    .dpad-key {
+      position: absolute; bottom: 2px; right: 4px; font-size: .52rem;
+      font-weight: 700; color: rgba(255,255,255,.28); pointer-events: none; line-height: 1;
+    }
+
+    /* ── Turn row ── */
+    .turn-row { display: flex; justify-content: center; gap: 12px; }
+
+    /* ── Velocity ── */
+    .vel-display {
+      font-family: 'SF Mono','Cascadia Code',monospace; font-size: var(--fs-sm);
+      background: rgba(255,255,255,.05); border-radius: 6px; padding: 5px 10px;
+      display: inline-flex; gap: 10px;
+    }
+
+    /* ── Speed sliders ── */
+    .form-range { height: 5px; cursor: pointer; }
+    .form-range::-webkit-slider-thumb { width: 20px; height: 20px; }
+    .form-range::-moz-range-thumb { width: 20px; height: 20px; }
+
+    /* ── Selector groups ── */
+    .sel-group .btn-check:checked + .btn { box-shadow: 0 0 10px var(--m1-accent); border-color: var(--m1-accent); }
+
+    /* ── State values ── */
+    .state-value { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
+    .state-label { font-size: var(--fs-xs); opacity: .45; text-transform: uppercase; letter-spacing: .5px; }
+    @media (max-width: 576px) { .state-value { font-size: 1.1rem; } }
+
+    /* ── Battery ── */
+    .batt-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .batt-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+    /* ── Quick action ── */
+    .qa-btn {
+      border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03); color: rgba(255,255,255,.7);
+      padding: 9px 6px; font-size: var(--fs-sm); text-align: center;
+      cursor: pointer; transition: all .12s ease; position: relative;
+      user-select: none; min-height: 40px; display: flex;
+      align-items: center; justify-content: center; -webkit-touch-callout: none;
+    }
+    @media (max-width: 576px) { .qa-btn { min-height: 44px; font-size: var(--fs-base); border-radius: 10px; } }
+    .qa-btn:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); }
+    .qa-btn:active { transform: scale(.95); }
+    .qa-btn.qa-success:active { background: var(--m1-success); border-color: var(--m1-success); color: #fff; }
+    .qa-btn.qa-warning:active { background: var(--m1-warning); border-color: var(--m1-warning); color: #000; }
+    .qa-btn.qa-danger:active { background: var(--m1-danger); border-color: var(--m1-danger); color: #fff; }
+    .qa-btn.qa-info:active { background: var(--m1-accent); border-color: var(--m1-accent); color: #fff; }
+
+    /* ── Cards ── */
+    .card { border: 1px solid rgba(255,255,255,.06); }
+    .card-header { font-weight: 600; font-size: var(--fs-sm); padding: .5rem .75rem; }
+    .card-body { font-size: var(--fs-base); padding: .6rem .7rem; }
+
+    /* ── Tabs ── */
+    .tab-nav { display: flex; gap: 0; border-bottom: 2px solid rgba(255,255,255,.08); margin-bottom: .75rem; }
+    .tab-btn { background: none; border: none; color: rgba(255,255,255,.5); padding: 8px 20px; font-size: var(--fs-base); font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .2s; }
+    .tab-btn.active { color: var(--m1-accent); border-bottom-color: var(--m1-accent); }
+    .tab-page { display: none; }
+    .tab-page.active { display: block; }
+
+    /* ── Header ── */
+    .header { padding: .4rem .75rem; }
+    @media (max-width: 576px) { .header { padding: .35rem .5rem; } }
+
+    /* ── Amap ── */
+    #amap-container { width: 100%; height: calc(100vh - 140px); min-height: 350px; border-radius: 8px; overflow: hidden; }
+    @media (max-width: 576px) { #amap-container { height: calc(100vh - 200px); min-height: 280px; } }
+    .map-coords { position: absolute; bottom: 8px; left: 8px; z-index: 100; background: rgba(0,0,0,.75); color: #fff; padding: 4px 10px; border-radius: 6px; font-family: 'SF Mono',monospace; font-size: var(--fs-xs); }
+    .map-actions { position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; flex-direction: column; gap: 5px; }
+    .map-actions .btn { pointer-events: auto; }
+    .waypoint-panel { max-height: 250px; overflow-y: auto; }
+    .waypoint-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: var(--fs-sm); }
+    .waypoint-item .coord { font-family: 'SF Mono',monospace; color: rgba(255,255,255,.5); }
+    .map-loading { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,.3); }
+    .btn-outline-purple { color: #a78bfa; border-color: #a78bfa; background: transparent; }
+    .btn-outline-purple:hover { color: #fff; background: #a78bfa; border-color: #a78bfa; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 2px; }
+
+    /* ── Dark body ── */
+    body { background: #14181e; overflow-x: hidden; }
+
+    /* ── Gamepad monitor ── */
+    .gp-btn {
+      width: 38px; height: 32px; border-radius: 5px;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      color: rgba(255,255,255,.25); font-size: .55rem; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; transition: all .08s;
+    }
+    .gp-btn.on { background: var(--m1-accent); border-color: var(--m1-accent); color: #fff; box-shadow: 0 0 8px rgba(59,130,246,.4); }
+    .gp-axis-bar { width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .gp-axis-fill { height: 100%; border-radius: 2px; background: var(--m1-warning); transition: width .05s linear; }
+    @media (max-width: 576px) { .gp-btn { width: 44px; height: 38px; font-size: .62rem; } }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper d-flex flex-column min-vh-100">
+
+    <!-- Header -->
+    <header class="header header-sticky">
+      <div class="container-fluid d-flex align-items-center">
+        <span style="font-size:1.3rem;margin-right:8px;">🦾</span>
+        <div>
+          <span class="h6 mb-0" style="font-size:var(--fs-base)">铜锤 M1</span>
+          <small class="text-medium-emphasis ms-2 d-none d-sm-inline" style="font-size:var(--fs-xs)">Control Center</small>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <span class="badge" id="robot-mode-badge" style="background:rgba(255,255,255,.08);font-size:var(--fs-xs);font-weight:400">--</span>
+          <span class="text-medium-emphasis d-none d-sm-inline" id="uptime-display" style="font-size:var(--fs-xs)">--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="px-2 px-sm-3"><div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">控制面板</button>
+      <button class="tab-btn" onclick="switchTab('map')">导航地图</button>
+      <button class="tab-btn" onclick="switchTab('traj')">轨迹管理</button>
+      <button class="tab-btn" onclick="switchTab('slam-map')">地图管理</button>
+    </div></div>
+
+    <!-- ═══════════ TAB: 控制面板 ═══════════ -->
+    <div class="tab-page active" id="tab-dashboard">
+    <div class="body flex-grow-1 px-2 px-sm-3">
+      <div class="container-fluid">
+        <div class="row g-2 g-sm-3">
+
+          <!-- ── 卡片1: 状态 + 进程 ── -->
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center">
+                <span>机器人状态</span>
+                <span class="vr mx-2 d-none d-md-inline"></span>
+                <span class="conn-led offline d-none d-md-inline" id="conn-led"></span>
+                <span id="conn-status-text" class="text-medium-emphasis ms-1 d-none d-md-inline" style="font-size:var(--fs-xs)">未连接</span>
+              </div>
+              <div class="card-body">
+                <!-- 姿态/模式/速度档 -->
+                <div class="d-flex justify-content-between mb-2">
+                  <div><div class="state-label">姿态</div><div class="state-value" id="st-posture">--</div></div>
+                  <div><div class="state-label">模式</div><div class="state-value" id="st-mode">--</div></div>
+                  <div><div class="state-label">速度档</div><div class="state-value" id="st-speed">--</div></div>
+                </div>
+                <hr class="my-1" style="border-color:rgba(255,255,255,.06)">
+                <!-- 电池1 -->
+                <div class="d-flex justify-content-between" style="font-size:var(--fs-sm)"><span>电池1</span><span id="batt1-pct">--</span></div>
+                <div class="batt-bar"><div class="batt-fill" id="batt1-fill" style="width:0%;background:var(--m1-success)"></div></div>
+                <div class="d-flex justify-content-between mb-2" style="font-size:var(--fs-xs);opacity:.55">
+                  <span id="st-batt1-temp">--°C</span><span id="st-batt1-volt">--V</span>
+                </div>
+                <!-- 电池2 -->
+                <div class="d-flex justify-content-between" style="font-size:var(--fs-sm)"><span>电池2</span><span id="batt2-pct" style="color:var(--m1-accent)">--</span></div>
+                <div class="batt-bar"><div class="batt-fill" id="batt2-fill" style="width:0%;background:var(--m1-accent)"></div></div>
+                <div class="d-flex justify-content-between mb-2" style="font-size:var(--fs-xs);opacity:.55">
+                  <span id="st-batt2-temp">--°C</span><span id="st-batt2-volt">--V</span>
+                </div>
+                <hr class="my-1" style="border-color:rgba(255,255,255,.06)">
+                <!-- 灯光 -->
+                <div class="d-flex gap-1 mb-2">
+                  <button class="btn btn-outline-warning btn-sm flex-grow-1" id="btn-front-light" style="font-size:var(--fs-xs)" onclick="toggleLight('front')">前灯关</button>
+                  <button class="btn btn-outline-warning btn-sm flex-grow-1" id="btn-back-light" style="font-size:var(--fs-xs)" onclick="toggleLight('back')">后灯关</button>
+                  <button class="btn btn-outline-info btn-sm flex-grow-1" id="btn-auto-light" style="font-size:var(--fs-xs)" onclick="toggleLight('auto')">自动关</button>
+                </div>
+                <!-- 故障 -->
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span style="font-size:var(--fs-xs);opacity:.55">故障</span>
+                  <span>
+                    <button class="btn btn-outline-secondary btn-sm" style="font-size:.6rem;padding:0 4px" onclick="clearFaults()">清除</button>
+                    <button class="btn btn-outline-warning btn-sm" style="font-size:.6rem;padding:0 4px" onclick="callSrv('/reset_faults')">重置</button>
+                  </span>
+                </div>
+                <div class="mb-1" id="fault-list" style="font-size:var(--fs-xs);max-height:55px;overflow-y:auto">
+                  <div class="text-medium-emphasis text-center py-1">无故障</div>
+                </div>
+                <hr class="my-1" style="border-color:rgba(255,255,255,.06)">
+                <!-- 急停/首尾/光照 -->
+                <div class="d-flex justify-content-between mb-1" style="font-size:var(--fs-xs);opacity:.55">
+                  <span>急停 <span id="st-err">--</span></span>
+                  <span>首尾 <span id="st-head-dir" style="color:var(--m1-success)">--</span></span>
+                  <span>光照 <span id="st-lux">--</span></span>
+                </div>
+                <!-- 关节温度 -->
+                <div style="font-size:var(--fs-xs);opacity:.5" class="mb-1">关节温度</div>
+                <div id="joint-temps" style="font-size:var(--fs-xs)">
+                  <div class="text-medium-emphasis text-center py-1">等待数据...</div>
+                </div>
+                <hr class="my-2" style="border-color:rgba(255,255,255,.08)">
+                <!-- ═══ 进程管理 ═══ -->
+                <div class="d-flex align-items-center flex-wrap mb-1" style="font-size:var(--fs-xs);gap:4px">
+                  <span class="opacity-50">进程</span>
+                  <span class="badge" id="proc-status-badge" style="background:rgba(255,255,255,.08);font-size:var(--fs-xs);font-weight:400">检测中...</span>
+                  <span class="ms-1 opacity-50" id="proc-rosbridge" style="font-size:var(--fs-xs)">rosbridge: --</span>
+                  <span class="opacity-50" id="proc-controller" style="font-size:var(--fs-xs)">controller: --</span>
+                </div>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="btn btn-outline-primary btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="callSrv('/take_control')">夺取控制</button>
+                  <button class="btn btn-outline-secondary btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="callSrv('/release_control')">释放控制</button>
+                </div>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-success btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/start')">全部启动</button>
+                  <button class="btn btn-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/stop')">全部停止</button>
+                  <button class="btn btn-warning btn-sm flex-grow-1" style="font-size:var(--fs-xs);color:#000" onclick="ctrlAPI('/restart')">全部重启</button>
+                </div>
+                <hr class="my-2" style="border-color:rgba(255,255,255,.08)">
+                <!-- ═══ 建图状态 ═══ -->
+                <div class="d-flex align-items-center flex-wrap mb-1" style="font-size:var(--fs-xs);gap:4px">
+                  <span class="opacity-50">建图</span>
+                  <span class="opacity-50" id="proc-zenoh" style="font-size:var(--fs-xs)">Zenoh: --</span>
+                  <span class="opacity-50" id="proc-voxel" style="font-size:var(--fs-xs)">降采样: --</span>
+                  <span class="opacity-50" id="proc-fastlio" style="font-size:var(--fs-xs)">FAST-LIO: --</span>
+                  <span class="opacity-50" id="proc-nvblox" style="font-size:var(--fs-xs)">nvblox: --</span>
+                  <span class="opacity-50" id="proc-nav2" style="font-size:var(--fs-xs)">nav2: --</span>
+                </div>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="btn btn-outline-success btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/fastlio/start')">START FAST-LIO</button>
+                  <button class="btn btn-outline-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/fastlio/stop')">STOP FAST-LIO</button>
+                  <button class="btn btn-outline-info btn-sm flex-grow-1" style="font-size:var(--fs-xs)" id="btn-map-save" onclick="saveSLAMMap()" disabled>💾 保存地图</button>
+                </div>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="btn btn-outline-success btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/voxel/start')">START 降采样</button>
+                  <button class="btn btn-outline-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/voxel/stop')">STOP 降采样</button>
+                </div>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-outline-info btn-sm flex-grow-1" id="btn-nvblox-start" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/nvblox/start')">START nvblox</button>
+                  <button class="btn btn-outline-danger btn-sm flex-grow-1" style="font-size:var(--fs-xs)" onclick="ctrlAPI('/service/nvblox/stop')">STOP nvblox</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 卡片2: 方向控制 ── -->
+          <div class="col-12 col-md-6 col-lg-4 order-first order-md-0">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center">
+                <span>方向控制</span>
+              </div>
+              <div class="card-body text-center">
+                <!-- D-Pad -->
+                <div class="dpad-wrap mb-2">
+                  <div class="dpad-row">
+                    <div style="width:var(--dpad-size);height:var(--dpad-size)"></div>
+                    <button class="dpad-btn" id="btn-fwd"
+                      onmousedown="startBtn('fwd')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                      ontouchstart="startBtn('fwd');event.preventDefault()" ontouchend="stopBtn()">▲<span class="dpad-key">W</span></button>
+                    <div style="width:var(--dpad-size);height:var(--dpad-size)"></div>
+                  </div>
+                  <div class="dpad-row">
+                    <button class="dpad-btn" id="btn-left"
+                      onmousedown="startBtn('left')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                      ontouchstart="startBtn('left');event.preventDefault()" ontouchend="stopBtn()">◄<span class="dpad-key">A</span></button>
+                    <button class="dpad-stop" onclick="setVel(0,0,0)">■<span class="dpad-key">Sp</span></button>
+                    <button class="dpad-btn" id="btn-right"
+                      onmousedown="startBtn('right')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                      ontouchstart="startBtn('right');event.preventDefault()" ontouchend="stopBtn()">►<span class="dpad-key">D</span></button>
+                  </div>
+                  <div class="dpad-row">
+                    <div style="width:var(--dpad-size);height:var(--dpad-size)"></div>
+                    <button class="dpad-btn" id="btn-back"
+                      onmousedown="startBtn('back')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                      ontouchstart="startBtn('back');event.preventDefault()" ontouchend="stopBtn()">▼<span class="dpad-key">S</span></button>
+                    <div style="width:var(--dpad-size);height:var(--dpad-size)"></div>
+                  </div>
+                </div>
+                <!-- Turn -->
+                <div class="turn-row mb-2">
+                  <button class="dpad-btn" id="btn-tleft"
+                    onmousedown="startBtn('tleft')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                    ontouchstart="startBtn('tleft');event.preventDefault()" ontouchend="stopBtn()">↺<span class="dpad-key">Q</span></button>
+                  <button class="dpad-btn" id="btn-tright"
+                    onmousedown="startBtn('tright')" onmouseup="stopBtn()" onmouseleave="stopBtn()"
+                    ontouchstart="startBtn('tright');event.preventDefault()" ontouchend="stopBtn()">↻<span class="dpad-key">E</span></button>
+                </div>
+                <!-- Speed sliders -->
+                <div class="text-start mb-1" style="font-size:var(--fs-sm)">
+                  <label class="form-label mb-0 opacity-50">直行 <span id="lin-pct">25</span>%</label>
+                  <input type="range" class="form-range" id="lin-speed" min="10" max="100" value="25" oninput="updateSpeedPct()">
+                </div>
+                <div class="text-start mb-2" style="font-size:var(--fs-sm)">
+                  <label class="form-label mb-0 opacity-50">转向 <span id="ang-pct">25</span>%</label>
+                  <input type="range" class="form-range" id="ang-speed" min="10" max="100" value="25" oninput="updateSpeedPct()">
+                </div>
+                <!-- Velocity display -->
+                <div class="vel-display mb-1">前<span id="vel-vx">0.00</span> 横<span id="vel-vy">0.00</span> 转<span id="vel-wz">0.00</span> <span id="gp-ind" class="d-none" style="color:var(--m1-warning);font-size:.6rem">🎮</span></div>
+                <div class="mb-2" style="font-size:var(--fs-xs);opacity:.45">
+                  <span id="real-vel">速度: --</span> <span class="ms-2" id="real-att">姿态: --</span>
+                </div>
+                <hr class="my-2" style="border-color:rgba(255,255,255,.06)">
+                <!-- Head -->
+                <div class="text-start" style="font-size:var(--fs-sm)">
+                  <span class="opacity-50">头部</span>
+                  <input type="range" class="form-range mt-1" min="-1" max="1" step="0.1" value="0" id="head-ud"
+                    oninput="sendHead()" onchange="this.value=0;sendHead()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 卡片3: 速度 / 动作 ── -->
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100">
+              <div class="card-header"><span>速度 / 动作</span></div>
+              <div class="card-body">
+                <!-- Speed gear -->
+                <div class="mb-2">
+                  <div class="opacity-50 mb-1" style="font-size:var(--fs-sm)">速度等级</div>
+                  <div class="btn-group w-100 sel-group" role="group">
+                    <input type="radio" class="btn-check" name="speed" id="spd-low" autocomplete="off" onchange="callSrv('/set_speed_low')">
+                    <label class="btn btn-outline-secondary btn-sm position-relative" for="spd-low">低速 <span class="dpad-key">1</span></label>
+                    <input type="radio" class="btn-check" name="speed" id="spd-mid" autocomplete="off" onchange="callSrv('/set_speed_mid')">
+                    <label class="btn btn-outline-secondary btn-sm position-relative" for="spd-mid">中速 <span class="dpad-key">2</span></label>
+                    <input type="radio" class="btn-check" name="speed" id="spd-high" autocomplete="off" onchange="callSrv('/set_speed_high')">
+                    <label class="btn btn-outline-secondary btn-sm position-relative" for="spd-high">高速 <span class="dpad-key">3</span></label>
+                  </div>
+                </div>
+                <!-- Mode -->
+                <div class="mb-2">
+                  <div class="opacity-50 mb-1" style="font-size:var(--fs-sm)">运动模式</div>
+                  <div class="btn-group w-100 sel-group" role="group">
+                    <input type="radio" class="btn-check" name="mode" id="mod-gen" autocomplete="off" onchange="callSrv('/set_mode_general')">
+                    <label class="btn btn-outline-secondary btn-sm" for="mod-gen">通用</label>
+                    <input type="radio" class="btn-check" name="mode" id="mod-inp" autocomplete="off" onchange="callSrv('/set_mode_inplace')">
+                    <label class="btn btn-outline-secondary btn-sm" for="mod-inp">原地</label>
+                    <input type="radio" class="btn-check" name="mode" id="mod-stair" autocomplete="off" onchange="callSrv('/set_mode_stair')">
+                    <label class="btn btn-outline-secondary btn-sm" for="mod-stair">登阶</label>
+                  </div>
+                </div>
+                <!-- Speed table -->
+                <table class="table table-borderless table-sm mb-1 text-center" style="font-size:var(--fs-xs)">
+                  <thead><tr class="opacity-40"><th class="text-start ps-1">档位</th><th>直行</th><th>转弯</th><th>平移</th></tr></thead>
+                  <tbody>
+                    <tr id="spt-low"><td class="text-start ps-1 fw-semibold">低速</td><td>1.0</td><td>2.0</td><td>0.5</td></tr>
+                    <tr id="spt-mid"><td class="text-start ps-1 fw-semibold">中速</td><td>2.0</td><td>1.5</td><td>—</td></tr>
+                    <tr id="spt-high"><td class="text-start ps-1 fw-semibold">高速</td><td>3.0</td><td>1.0</td><td>—</td></tr>
+                  </tbody>
+                </table>
+                <div class="opacity-40 mb-2" style="font-size:var(--fs-xs)">中高速禁止平移</div>
+                <hr class="my-2" style="border-color:rgba(255,255,255,.06)">
+                <!-- Quick actions -->
+                <div class="opacity-50 mb-1" style="font-size:var(--fs-sm)">快速动作</div>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="qa-btn qa-success flex-grow-1" onclick="callSrv('/stand_up')">站立<span class="dpad-key">Z</span></button>
+                  <button class="qa-btn qa-warning flex-grow-1" onclick="callSrv('/crawl')">匍匐<span class="dpad-key">X</span></button>
+                  <button class="qa-btn qa-danger flex-grow-1" onclick="callSrv('/lie_down')">卧倒<span class="dpad-key">C</span></button>
+                  <button class="qa-btn qa-warning flex-grow-1" onclick="callSrv('/climb')">登高</button>
+                </div>
+                <div class="d-flex gap-1 mb-1">
+                  <button class="qa-btn qa-info flex-grow-1" onclick="callSrv('/gait')">步态</button>
+                  <button class="qa-btn qa-info flex-grow-1" onclick="callSrv('/slim')">缩身</button>
+                  <button class="qa-btn qa-info flex-grow-1" onclick="callSrv('/dsb')">越障</button>
+                  <button class="qa-btn qa-info flex-grow-1" onclick="callSrv('/locked')">锁定</button>
+                </div>
+                <div class="d-flex gap-1">
+                  <button class="qa-btn flex-grow-1" style="border-color:rgba(168,85,247,.3)" id="btn-reverse" onclick="callSrv('/reverse_head_tail')">首尾反转</button>
+                  <button class="qa-btn flex-grow-1" style="border-color:rgba(239,68,68,.3);color:var(--m1-danger)" onclick="callSrv('/emergency_stop')">急停<span class="dpad-key">Esc</span></button>
+                  <button class="qa-btn flex-grow-1" style="border-color:rgba(34,197,94,.3);color:var(--m1-success)" onclick="callSrv('/release_emergency')">解除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- .row -->
+
+        <!-- ═══ 手柄键位采集 ═══ -->
+        <div class="row g-2 g-sm-3 mb-3">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span>手柄键位采集</span>
+                <span class="text-medium-emphasis" id="gp-status" style="font-size:var(--fs-xs)">未检测到手柄 — 请连接后按任意键激活</span>
+              </div>
+              <div class="card-body" style="padding:.5rem .7rem">
+                <div id="gp-buttons" class="d-flex gap-1 flex-wrap mb-2" style="min-height:34px">
+                  <span class="text-medium-emphasis" style="font-size:var(--fs-xs)">等待手柄...</span>
+                </div>
+                <div id="gp-axes" class="row gx-2 gy-1" style="font-size:var(--fs-xs)">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB: 导航地图 ═══════════ -->
+  <div class="tab-page" id="tab-map">
+    <div class="body flex-grow-1 px-2 px-sm-3">
+      <div class="container-fluid">
+        <div class="row g-2 g-sm-3">
+          <div class="col-12 col-lg-8">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+                <span>高德地图</span>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-outline-primary btn-sm" onclick="mapSetLayer(0)" style="font-size:var(--fs-xs)">标准</button>
+                  <button class="btn btn-outline-primary btn-sm" onclick="mapSetLayer(1)" style="font-size:var(--fs-xs)">卫星</button>
+                  <button class="btn btn-outline-primary btn-sm" onclick="mapSetLayer(2)" style="font-size:var(--fs-xs)">三维</button>
+                  <button class="btn btn-outline-light btn-sm" onclick="mapResetView()" style="font-size:var(--fs-xs)" title="回正视角">⟲</button>
+                  <button class="btn btn-warning btn-sm" id="btn-gps-center" onclick="toggleGPSCenter()" style="font-size:var(--fs-xs)">GPS居中:开</button>
+                  <button class="btn btn-success btn-sm" id="btn-record-path" onclick="toggleRecording()" style="font-size:var(--fs-xs)">记录:开</button>
+                  <button class="btn btn-outline-info btn-sm" onclick="exportPath()" style="font-size:var(--fs-xs)">📥导出</button>
+                </div>
+              </div>
+              <div class="card-body p-0 position-relative">
+                <div class="map-loading" id="map-loading">加载高德地图中...</div>
+                <div id="amap-container" style="display:none"></div>
+                <div class="map-coords" id="map-coords" style="display:none">--</div>
+                <div class="map-actions">
+                  <button class="btn btn-primary btn-sm" onclick="addWaypointAtCenter()">📍</button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="clearWaypoints()">🗑</button>
+                  <button class="btn btn-outline-success btn-sm" onclick="toggleRoute()">🧭</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-4">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span>途经点</span>
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearWaypoints()" style="font-size:var(--fs-xs)">清空</button>
+              </div>
+              <div class="card-body">
+                <div class="waypoint-panel" id="waypoint-list">
+                  <div class="text-medium-emphasis text-center py-3" style="font-size:var(--fs-sm)">点击地图或 📍 添加途经点</div>
+                </div>
+                <hr>
+                <div style="font-size:var(--fs-sm);opacity:.55">
+                  <div>机器人位置: <span id="gps-status">等待 GPS...</span></div>
+                  <div class="mt-1">地图中心: <span id="map-center" class="font-monospace">--</span></div>
+                  <div class="mt-1">缩放: <span id="map-zoom">--</span></div>
+                </div>
+                <hr>
+                <div style="font-size:var(--fs-xs)" id="rtk-info-panel">
+                  <div class="text-muted mb-1">📡 RTK 状态</div>
+                  <table class="table table-sm table-borderless mb-0" style="--cui-table-color:rgba(255,255,255,.7);font-size:var(--fs-xs)">
+                    <tr><td style="opacity:.5;width:40%">定位类型</td><td><span id="rtk-pos-type">--</span></td></tr>
+                    <tr><td style="opacity:.5">卫星(跟踪/解算)</td><td><span id="rtk-svs">--</span></td></tr>
+                    <tr><td style="opacity:.5">差分龄期</td><td><span id="rtk-diff-age">--</span></td></tr>
+                    <tr><td style="opacity:.5">水平精度</td><td><span id="rtk-h-std">--</span></td></tr>
+                    <tr><td style="opacity:.5">高程精度</td><td><span id="rtk-v-std">--</span></td></tr>
+                    <tr><td style="opacity:.5">水平速度</td><td><span id="rtk-hor-spd">--</span></td></tr>
+                    <tr><td style="opacity:.5">航向角</td><td><span id="rtk-hdg">--</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- ═══════════ TAB: 轨迹管理 ═══════════ -->
+  <div class="tab-page" id="tab-traj">
+    <div class="body flex-grow-1 px-2 px-sm-3">
+      <div class="container-fluid">
+        <div class="row g-2 g-sm-3">
+
+          <!-- ── 左栏: 当前轨迹 ── -->
+          <div class="col-12 col-md-5 col-lg-4">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+                <span>📍 当前轨迹</span>
+                <span class="badge" id="traj-rec-badge" style="background:#22c55e33;color:#22c55e;font-size:var(--fs-xs)">记录中</span>
+              </div>
+              <div class="card-body" style="font-size:var(--fs-sm)">
+                <div class="row g-2 mb-3">
+                  <div class="col-4"><span class="state-label">点数</span><br><span class="state-value" id="traj-points">0</span></div>
+                  <div class="col-4"><span class="state-label">距离</span><br><span class="state-value" id="traj-dist">0m</span></div>
+                  <div class="col-4"><span class="state-label">时长</span><br><span class="state-value" id="traj-dur">0s</span></div>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-4"><span class="state-label">good</span><br><span style="color:#22c55e" id="traj-good">0</span></div>
+                  <div class="col-4"><span class="state-label">degraded</span><br><span style="color:#f59e0b" id="traj-degraded">0</span></div>
+                  <div class="col-4"><span class="state-label">平均速</span><br><span style="color:var(--m1-accent)" id="traj-avgspd">0</span></div>
+                </div>
+                <div class="d-flex gap-1 flex-wrap mb-2">
+                  <button class="btn btn-outline-secondary btn-sm" id="btn-record-path" onclick="toggleRecording()" style="font-size:var(--fs-xs)">暂停</button>
+                  <button class="btn btn-outline-info btn-sm" onclick="exportCurrentPath()" style="font-size:var(--fs-xs)">导出CSV</button>
+                </div>
+                <div class="d-flex gap-1 flex-wrap">
+                  <button class="btn btn-outline-success btn-sm flex-grow-1" onclick="saveTrajectory()" style="font-size:var(--fs-xs)">💾 保存存档</button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="clearCurrentPath()" style="font-size:var(--fs-xs)">清空</button>
+                  <button class="btn btn-outline-warning btn-sm" onclick="saveAndNewTrajectory()" style="font-size:var(--fs-xs)">存并新建</button>
+                </div>
+                <div class="mt-2 text-muted" style="font-size:var(--fs-xs)" id="path-status">加载中…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 右栏: 历史存档 ── -->
+          <div class="col-12 col-md-7 col-lg-8">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+                <span>📂 历史存档 <small class="text-muted" id="traj-archive-count" style="font-size:var(--fs-xs)"></small></span>
+                <div class="d-flex gap-1">
+                  <input type="text" class="form-control form-control-sm d-none d-md-inline-block" id="traj-search" placeholder="搜索…" style="width:120px;font-size:var(--fs-xs)" oninput="renderTrajectoryList()">
+                  <button class="btn btn-outline-info btn-sm" onclick="loadTrajectoryList()" style="font-size:var(--fs-xs)" title="刷新列表">🔄</button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="deleteAllTrajectories()" style="font-size:var(--fs-xs)" title="删除全部存档">🗑全部</button>
+                </div>
+              </div>
+              <div class="px-3 py-1 d-flex gap-3" style="background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.06);font-size:var(--fs-xs)">
+                <span>总存档: <b id="traj-sum-count">0</b></span>
+                <span>总距离: <b id="traj-sum-dist">0m</b></span>
+                <span>总时长: <b id="traj-sum-dur">0s</b></span>
+              </div>
+              <div class="card-body p-0" style="max-height:420px;overflow-y:auto">
+                <div id="traj-list" style="font-size:var(--fs-sm)">
+                  <div id="traj-list-empty" class="text-center text-muted py-4">点击 🔄 加载存档列表</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB: 地图管理 ═══════════ -->
+  <div class="tab-page" id="tab-slam-map">
+    <div class="body flex-grow-1 px-2 px-sm-3">
+      <div class="container-fluid">
+        <div class="row g-2 g-sm-3">
+
+          <!-- ── 左栏: 当前地图 ── -->
+          <div class="col-12 col-md-5 col-lg-4">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+                <span>🗺️ FAST-LIO 地图</span>
+                <span class="badge" id="map-save-badge" style="background:#22c55e33;color:#22c55e;font-size:var(--fs-xs);display:none">已保存</span>
+              </div>
+              <div class="card-body" style="font-size:var(--fs-sm)">
+                <div class="row g-2 mb-3">
+                  <div class="col-12"><span class="state-label">FAST-LIO</span><br><span class="state-value" id="map-fl-status">--</span></div>
+                </div>
+                <div class="d-flex gap-1 flex-wrap mb-2">
+                  <input type="text" class="form-control form-control-sm" id="map-save-name" placeholder="输入地图名称（可选）" style="font-size:var(--fs-xs)">
+                </div>
+                <div class="d-flex gap-1 flex-wrap mb-2">
+                  <button class="btn btn-outline-success btn-sm flex-grow-1" onclick="saveSLAMMap()" id="btn-map-save2" style="font-size:var(--fs-xs)" disabled>💾 保存当前地图</button>
+                </div>
+                <div class="mt-2 text-muted" style="font-size:var(--fs-xs)" id="map-status">确保 FAST-LIO 运行中</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 右栏: 已保存地图 ── -->
+          <div class="col-12 col-md-7 col-lg-8">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+                <span>📂 已保存地图 <small class="text-muted" id="map-archive-count" style="font-size:var(--fs-xs)"></small></span>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-outline-info btn-sm" onclick="loadMapList()" style="font-size:var(--fs-xs)">🔄 刷新</button>
+                </div>
+              </div>
+              <div class="card-body p-0" style="max-height:420px;overflow-y:auto">
+                <div id="map-list" style="font-size:var(--fs-sm)">
+                  <div id="map-list-empty" class="text-center text-muted py-4">点击 🔄 刷新列表</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .wrapper -->
+
+  <script src="vendor/roslib.min.js"></script>
+  <script src="vendor/coreui.bundle.min.js"></script>
+
+  <script>
+  const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname==='192.168.0.100'||location.hostname==='192.168.168.100';
+  const ROS_WS=isLocal?`ws://${location.hostname}:9091`:`ws://${location.hostname}:9090`;
+  const CTRL_HOST=`http://${location.hostname}:${location.port}`;
+  let currentSpeedLevel=0;
+  const DEADMAN_MS=500;
+  let ros=null,cmdVelTopic=null,cmdInterval=null;
+  let vx=0,vy=0,wz=0,lastCmdTime=Date.now();
+  const keys={};
+  const lightState={front:false,back:false,auto:false};
+
+  function connectROS() {
+    if(ros){ros.close();}
+    ros=new ROSLIB.Ros({url:ROS_WS});
+    window.addEventListener('beforeunload',function(){try{ros.close();}catch(e){}});
+    window.addEventListener('pagehide',function(){try{ros.close();}catch(e){}});
+    ros.on('connection',()=>{setConnectionStatus(true);subscribeState();subscribeFaults();subscribeMCSensor();subscribeLuxSensor();subscribeGPS();setTimeout(startCmdLoop,500);});
+    ros.on('close',()=>{setConnectionStatus(false);if(cmdInterval){clearInterval(cmdInterval);cmdInterval=null;}if(statusInterval){clearInterval(statusInterval);statusInterval=null;}});
+    ros.on('error',e=>console.warn('ROS error:',e));
+  }
+
+  function setConnectionStatus(online) {
+    ['conn-led','conn-led-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.className='conn-led '+(online?'online':'offline');});
+    ['conn-status-text','conn-status-text-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=online?'ROS 已连接':'未连接';});
+  }
+
+  function startCmdLoop() {
+    if(!cmdVelTopic)cmdVelTopic=new ROSLIB.Topic({ros,name:'/cmd_vel',messageType:'geometry_msgs/Twist'});
+    if(cmdInterval)clearInterval(cmdInterval);
+    cmdInterval=setInterval(()=>{
+      if(!ros||!ros.isConnected)return;
+      var needPub=false;
+      if(activeBtn){applyBtnVel();needPub=true;}
+      else if(Date.now()-lastCmdTime>DEADMAN_MS&&(vx!==0||vy!==0||wz!==0)){vx=vy=wz=0;needPub=true;}
+      if(needPub)try{cmdVelTopic.publish({linear:{x:vy,y:vx,z:0},angular:{x:0,y:0,z:wz}});}catch(e){}
+      updateVelDisplay();
+    },20);
+  }
+
+  function setVel(nvx,nvy,nwz){vx=nvx;vy=nvy;wz=nwz;lastCmdTime=Date.now();}
+  function updateVelDisplay(){
+    document.getElementById('vel-vx').textContent=vy.toFixed(2);
+    document.getElementById('vel-vy').textContent=vx.toFixed(2);
+    document.getElementById('vel-wz').textContent=wz.toFixed(2);
+  }
+
+  function callSrv(name,type='std_srvs/srv/Trigger',request={}){
+    if(!ros||!ros.isConnected){console.warn('ROS not connected');return;}
+    const srv=new ROSLIB.Service({ros,name,serviceType:type});
+    srv.callService(new ROSLIB.ServiceRequest(request),r=>console.log(name,'→',r),e=>console.error(name,'✗',e));
+    setTimeout(()=>{if(srv)srv.unadvertise();},2000);
+  }
+  function callSetBool(name,data){callSrv(name,'std_srvs/srv/SetBool',{data});}
+  function sendHead(){
+    const ud=parseFloat(document.getElementById('head-ud').value);
+    callSrv('/control_head','m1_sdk_controller/srv/ControlHead',{left_right:0,up_down:ud});
+  }
+  function toggleLight(which){
+    lightState[which]=!lightState[which];
+    const n=which==='front'?'/front_light':which==='back'?'/back_light':'/auto_mode_light';
+    callSetBool(n,lightState[which]);updateLightButtons();
+  }
+  function updateLightButtons(){
+    const labels={front:'前灯',back:'后灯',auto:'自动'};
+    ['front','back','auto'].forEach(w=>{
+      const btn=document.getElementById(`btn-${w}-light`);
+      if(btn){btn.textContent=`${labels[w]}${lightState[w]?'开':'关'}`;
+        btn.className=`btn btn-sm flex-grow-1 ${lightState[w]?'btn-warning':'btn-outline-warning'}`;
+        if(w==='auto')btn.className=`btn btn-sm flex-grow-1 ${lightState.auto?'btn-info':'btn-outline-info'}`;}
+    });
+  }
+
+  let linPct=.25,angPct=.25,activeBtn=null;
+  const MOVE_LIMIT={fwd:1.0,lat:0.3,yaw:1.0};
+  function updateSpeedPct(){
+    linPct=parseInt(document.getElementById('lin-speed').value)/100;
+    angPct=parseInt(document.getElementById('ang-speed').value)/100;
+    document.getElementById('lin-pct').textContent=Math.round(linPct*100);
+    document.getElementById('ang-pct').textContent=Math.round(angPct*100);
+  }
+  function applyBtnVel(){
+    if(!activeBtn)return;
+    const fwd=Math.max(-MOVE_LIMIT.fwd,Math.min(MOVE_LIMIT.fwd,linPct));
+    const latLimit=currentSpeedLevel>=2?0:MOVE_LIMIT.lat;
+    const lat=Math.max(-latLimit,Math.min(latLimit,linPct));
+    const yaw=Math.max(-MOVE_LIMIT.yaw,Math.min(MOVE_LIMIT.yaw,angPct));
+    switch(activeBtn){case'fwd':setVel(0,fwd,0);break;case'back':setVel(0,-fwd,0);break;case'left':setVel(lat,0,0);break;case'right':setVel(-lat,0,0);break;case'tleft':setVel(0,0,yaw);break;case'tright':setVel(0,0,-yaw);break;}
+  }
+  function startBtn(dir){activeBtn=dir;applyBtnVel();}
+  function stopBtn(){activeBtn=null;setVel(0,0,0);}
+
+  window.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
+    keys[e.key.toLowerCase()]=true;
+    switch(e.key.toLowerCase()){
+      case'z':callSrv('/stand_up');break;case'x':callSrv('/crawl');break;case'c':callSrv('/lie_down');break;
+      case'v':callSrv('/gait');break;case'b':callSrv('/slim');break;
+      case'1':callSrv('/set_speed_low');document.getElementById('spd-low').checked=true;break;
+      case'2':callSrv('/set_speed_mid');document.getElementById('spd-mid').checked=true;break;
+      case'3':callSrv('/set_speed_high');document.getElementById('spd-high').checked=true;break;
+      case'escape':callSrv('/emergency_stop');setVel(0,0,0);break;
+      case' ':e.preventDefault();setVel(0,0,0);break;
+    }
+    updateKeyboardVel();
+  });
+  window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;updateKeyboardVel();});
+  function updateKeyboardVel(){
+    let kvx=0,kvy=0,kwz=0;
+    if(keys['w'])kvy=linPct;if(keys['s'])kvy=-linPct;
+    if(currentSpeedLevel<2){if(keys['a'])kvx=linPct;if(keys['d'])kvx=-linPct;}
+    if(keys['q'])kwz=angPct;if(keys['e'])kwz=-angPct;
+    setVel(kvx,kvy,kwz);
+  }
+
+  function subscribeState(){
+    new ROSLIB.Topic({ros,name:'/robot_state',messageType:'m1_sdk_controller/msg/RobotState'}).subscribe(msg=>{
+      const ps={0:'未知',1:'站立',2:'卧倒',3:'匍匐',4:'锁定',5:'通用',6:'原地',7:'登阶',8:'登高',9:'缩身',10:'步态',11:'越障'};
+      document.getElementById('st-posture').textContent=ps[msg.motion_status]||msg.motion_status;
+      const ms={0:'--',1:'通用',2:'原地',3:'登阶'};
+      document.getElementById('st-mode').textContent=ms[msg.sport_mode]||msg.sport_mode;
+      document.getElementById('robot-mode-badge').textContent=ms[msg.sport_mode]||'--';
+      const ss={0:'--',1:'低速',2:'中速',3:'高速'};
+      document.getElementById('st-speed').textContent=ss[msg.speed_level]||msg.speed_level;
+      ['spt-low','spt-mid','spt-high'].forEach((id,i)=>{const r=document.getElementById(id);if(r){r.classList.toggle('table-active',i+1===msg.speed_level);r.style.background=i+1===msg.speed_level?'rgba(59,130,246,.15)':'';}});
+      if(msg.speed_level>=1&&msg.speed_level<=3){document.getElementById(['spd-low','spd-mid','spd-high'][msg.speed_level-1]).checked=true;currentSpeedLevel=msg.speed_level;}
+      if(msg.sport_mode>=1&&msg.sport_mode<=3)document.getElementById(['mod-gen','mod-inp','mod-stair'][msg.sport_mode-1]).checked=true;
+
+      const p1=msg.battery_power1!=null?msg.battery_power1:0,pr1=msg.battery_present1!==false;
+      const v1=msg.battery_voltage1!=null?msg.battery_voltage1.toFixed(1):'--',t1=msg.battery_temp1!=null?msg.battery_temp1.toFixed(0):'--';
+      const b1e=document.getElementById('batt1-pct'),b1f=document.getElementById('batt1-fill');
+      if(pr1){b1e.textContent=`${p1.toFixed(0)}%`;b1e.style.color='';b1f.style.width=`${p1}%`;b1f.style.background=p1>30?'var(--m1-success)':p1>15?'var(--m1-warning)':'var(--m1-danger)';
+        document.getElementById('st-batt1-temp').textContent=`${t1}°C`;document.getElementById('st-batt1-volt').textContent=`${v1}V`;}
+      else{b1e.textContent='离线';b1e.style.color='rgba(255,255,255,.2)';b1f.style.width='0%';document.getElementById('st-batt1-temp').textContent='--';document.getElementById('st-batt1-volt').textContent='--';}
+
+      const p2=msg.battery_power2!=null?msg.battery_power2:0,pr2=msg.battery_present2===true;
+      const v2=msg.battery_voltage2!=null?msg.battery_voltage2.toFixed(1):'--',t2=msg.battery_temp2!=null?msg.battery_temp2.toFixed(0):'--';
+      const b2e=document.getElementById('batt2-pct'),b2f=document.getElementById('batt2-fill');
+      if(pr2){b2e.textContent=`${p2.toFixed(0)}%`;b2e.style.color='';b2f.style.width=`${p2}%`;b2f.style.background=p2>30?'var(--m1-accent)':p2>15?'var(--m1-warning)':'var(--m1-danger)';
+        document.getElementById('st-batt2-temp').textContent=`${t2}°C`;document.getElementById('st-batt2-volt').textContent=`${v2}V`;}
+      else{b2e.textContent='离线';b2e.style.color='rgba(255,255,255,.2)';b2f.style.width='0%';document.getElementById('st-batt2-temp').textContent='--';document.getElementById('st-batt2-volt').textContent='--';}
+
+      const soft=msg.software_emergency_status===1?'':'软',hard=msg.hardware_emergency_status===1?'':'硬';
+      document.getElementById('st-err').textContent=[soft,hard].filter(Boolean).join('+')+'急停'||'无';
+      if(![soft,hard].filter(Boolean).length)document.getElementById('st-err').textContent='无';
+
+      const hd=document.getElementById('st-head-dir');
+      if(msg.head_direction===1){hd.textContent='正向';hd.style.color='var(--m1-success)';const br=document.getElementById('btn-reverse');if(br){br.classList.remove('btn-outline-warning');br.classList.add('btn-outline-purple');}}
+      else if(msg.head_direction===2){hd.textContent='反向';hd.style.color='var(--m1-warning)';const br=document.getElementById('btn-reverse');if(br){br.classList.remove('btn-outline-purple');br.classList.add('btn-outline-warning');}}
+
+      if(msg.front_fill_light!==undefined)lightState.front=(msg.front_fill_light===1);
+      if(msg.back_fill_light!==undefined)lightState.back=(msg.back_fill_light===1);
+      updateLightButtons();
+
+      if(msg.joint_temps&&msg.joint_temps.length>0){
+        const names=msg.joint_names||[],legs={fl:[],fr:[],bl:[],br:[]},lbl={fl:'FL',fr:'FR',bl:'BL',br:'BR'};
+        msg.joint_temps.forEach((t,i)=>{const nm=names[i]||'',pfx=nm.slice(0,2).toLowerCase(),num=parseInt(nm.slice(2))||0;if(legs[pfx])legs[pfx].push({num,t});});
+        Object.values(legs).forEach(a=>a.sort((a,b)=>a.num-b.num));
+        const tc=t=>t>70?'var(--m1-danger)':t>50?'var(--m1-warning)':'var(--m1-success)';
+        document.getElementById('joint-temps').innerHTML=Object.entries(legs).map(([lg,jts])=>jts.length?`<div class="d-flex justify-content-between mb-0"><span style="opacity:.5">${lbl[lg]}</span><span>${jts.map(j=>`<span style="color:${tc(j.t)}">${j.t.toFixed(0)}°</span>`).join(' ')}</span></div>`:'').join('');
+      }
+      const ut=document.getElementById('uptime-display');if(ut)ut.textContent=new Date().toLocaleTimeString('zh-CN');
+    });
+  }
+
+  function subscribeFaults(){
+    new ROSLIB.Topic({ros,name:'/faults_snapshot',messageType:'std_msgs/String'}).subscribe(msg=>{
+      const fl=document.getElementById('fault-list'),lc={0:'secondary',1:'warning',2:'danger'},ln={0:'信息',1:'警告',2:'严重'};
+      try{
+        const arr=JSON.parse(msg.data);
+        if(!arr||arr.length===0){
+          fl.innerHTML='<div class="text-medium-emphasis text-center py-1">无故障</div>';
+          return;
+        }
+        fl.innerHTML=arr.map(f=>{
+          const lv=f.level!=null?f.level:0;
+          return `<div class="small py-0 border-bottom border-secondary-subtle" style="font-size:var(--fs-xs)"><span class="badge bg-${lc[lv]||'secondary'} me-1">${ln[lv]||lv}</span><code class="text-medium-emphasis">[${f.code}]</code> ${f.message||'未知'}</div>`;
+        }).join('');
+      }catch(e){}
+    });
+  }
+
+  function clearFaults(){
+    document.getElementById('fault-list').innerHTML='<div class="text-medium-emphasis text-center py-1">无故障</div>';
+  }
+
+  function subscribeMCSensor(){
+    new ROSLIB.Topic({ros,name:'/mc_data',messageType:'m1_sdk_controller/msg/McData'}).subscribe(msg=>{
+      const vx=msg.v_body[0]!=null?msg.v_body[0].toFixed(2):'--',vy=msg.v_body[1]!=null?msg.v_body[1].toFixed(2):'--',wz=msg.omega_body[2]!=null?msg.omega_body[2].toFixed(2):'--';
+      document.getElementById('real-vel').textContent=`速度: 前${vx} 横${vy} 转${wz}`;
+      const q=msg.quat,roll=Math.atan2(2*(q[0]*q[1]+q[2]*q[3]),1-2*(q[1]*q[1]+q[2]*q[2])),
+        pitch=Math.asin(Math.max(-1,Math.min(1,2*(q[0]*q[2]-q[3]*q[1])))),
+        yaw=Math.atan2(2*(q[0]*q[3]+q[1]*q[2]),1-2*(q[2]*q[2]+q[3]*q[3])),td=r=>(r*180/Math.PI).toFixed(1);
+      document.getElementById('real-att').textContent=`姿态: R${td(roll)}° P${td(pitch)}° Y${td(yaw)}°`;
+    });
+  }
+
+  function subscribeLuxSensor(){
+    new ROSLIB.Topic({ros,name:'/lux_data',messageType:'m1_sdk_controller/msg/LuxData'}).subscribe(msg=>{
+      document.getElementById('st-lux').textContent=`${msg.lux!=null?msg.lux.toFixed(0):'--'} lux`;
+    });
+  }
+
+  function subscribeGPS(){
+    new ROSLIB.Topic({ros,name:'/gps/fix',messageType:'sensor_msgs/NavSatFix'}).subscribe(msg=>{
+      if(msg.latitude==null||msg.longitude==null||!isFinite(msg.latitude)||!isFinite(msg.longitude))return;
+      const lng=msg.longitude, lat=msg.latitude;
+      updateRobotGPS(lng, lat, null);
+      document.getElementById('map-coords').textContent=
+        `${lat.toFixed(7)}, ${lng.toFixed(7)} ±${Math.sqrt(msg.position_covariance[0]).toFixed(1)}m`;
+    });
+    // ── RTK 详细数据 ──
+    new ROSLIB.Topic({ros,name:'/gps/rtk_info',messageType:'std_msgs/String'}).subscribe(msg=>{
+      try{
+        const d=JSON.parse(msg.data);
+        const ptEl=document.getElementById('rtk-pos-type');
+        ptEl.textContent=d.pos_type_name||d.pos_type;
+        const pt=d.pos_type;
+        ptEl.style.color=pt>=34?'#22c55e':pt>=4?'#f59e0b':pt>=1?'#3b82f6':'rgba(255,255,255,.3)';
+        const svs=d.svs_num||0;
+        document.getElementById('rtk-svs').textContent=`${svs}/${d.soln_svs_num||0}`;
+        document.getElementById('rtk-diff-age').textContent=`${d.diff_age_s||0}s`;
+        currentGPSSignal=svs>=15?'good':svs>=1?'degraded':'lost';
+        const hstd=Math.max(d.lat_std||0,d.lon_std||0).toFixed(2);
+        document.getElementById('rtk-h-std').textContent=`±${hstd}m`;
+        document.getElementById('rtk-v-std').textContent=`±${(d.hgt_std||0).toFixed(2)}m`;
+        document.getElementById('rtk-hor-spd').textContent=`${(d.hor_spd||0).toFixed(2)} m/s`;
+        document.getElementById('rtk-hdg').textContent=d.heading_deg!=null?`${d.heading_deg.toFixed(1)}°`:'--';
+      }catch(e){}
+    });
+  }
+
+  function ctrlAPI(path,m){if(!m)m=path.startsWith('/service/')||path.startsWith('/map/')?'POST':'GET';fetch(CTRL_HOST+path,{method:m}).then(r=>r.json()).then(d=>updateProcStatus(d)).catch(e=>console.error('ctrlAPI error:',e));}
+  function updateProcStatus(data){
+    if(!data)return;
+    const rb=data.rosbridge?.running||false,ct=data.controller?.running||false,wb=data.webui?.running||false;
+    document.getElementById('proc-rosbridge').textContent=`rosbridge: ${rb?'✅':'❌'}`;
+    document.getElementById('proc-controller').textContent=`controller: ${ct?'✅':'❌'}`;
+    const all=rb&&ct&&wb,badge=document.getElementById('proc-status-badge');
+    badge.textContent=all?'全部运行':(rb||ct||wb)?'部分运行':'已停止';
+    badge.style.background=all?'var(--m1-success)':(rb||ct||wb)?'var(--m1-warning)':'var(--m1-danger)';
+    // 建图状态
+    const fl=data['fastlio']?.running||false, nv=data['nvblox']?.running||false;
+    const zh=data['zenoh']?.running||false;
+    const vx=data['voxel']?.running||false, n2=data['nav2']?.running||false;
+    
+    document.getElementById('proc-zenoh').textContent=`Zenoh: ${zh?'✅':'❌'}`;
+    document.getElementById('proc-voxel').textContent=`降采样: ${vx?'✅':'❌'}`;
+    document.getElementById('proc-fastlio').textContent=`FAST-LIO: ${fl?'✅':'❌'}`;
+    document.getElementById('proc-nvblox').textContent=`nvblox: ${nv?'✅':'❌'}`;
+    document.getElementById('proc-nav2').textContent=`nav2: ${n2?'✅':'❌'}`;
+    
+    const nvBtn=document.getElementById('btn-nvblox-start');
+    if(nvBtn) nvBtn.disabled = !fl;
+    // 地图保存按钮状态
+    const mapSaveBtn=document.getElementById('btn-map-save');
+    const mapSaveBtn2=document.getElementById('btn-map-save2');
+    if(mapSaveBtn) mapSaveBtn.disabled = !fl;
+    if(mapSaveBtn2) mapSaveBtn2.disabled = !fl;
+  }
+  let statusInterval=setInterval(()=>ctrlAPI('/status'),5000);ctrlAPI('/status');
+  connectROS();
+
+  // ═══ 手柄控制 ═══
+  // 轴1: 前后 (前进=-1, 后退=+1)  |  轴2: 转向 (左=-1, 右=+1)  |  轴0: 横移 (左=-1, 右=+1)
+  // B0=暂停  B1=急停  B2=前灯  B3=后灯
+  let gpActive=false, gpInit=false, gpLastState=null, gpPrevBtns=[], gpDead=0.08;
+  function pollGamepad(){
+    const gps=navigator.getGamepads(); let g=null;
+    for(const x of gps){if(x){g=x;break;}}
+    const stEl=document.getElementById('gp-status');
+    if(!g){
+      if(gpInit){stEl.textContent='手柄已断开';document.getElementById('gp-buttons').innerHTML='<span class="text-medium-emphasis" style="font-size:var(--fs-xs)">等待手柄...</span>';document.getElementById('gp-axes').innerHTML='';gpInit=false;}
+      if(gpActive){setVel(0,0,0);gpActive=false;}
+      requestAnimationFrame(pollGamepad);return;
+    }
+    if(!gpInit){
+      stEl.textContent=`已连接: ${g.id}`;
+      let bh='';for(let i=0;i<g.buttons.length;i++)bh+=`<div class="gp-btn" id="gpb-${i}">B${i}</div>`;
+      document.getElementById('gp-buttons').innerHTML=bh;
+      let ah='';const alabels=['横移(LR)','前后(FB)','转向(LR)'];
+      for(let i=0;i<g.axes.length;i++)ah+=`<div class="col-6 col-sm-3"><span class="opacity-50">${alabels[i]||'轴'+i}</span><div class="gp-axis-bar"><div class="gp-axis-fill" id="gpa-${i}" style="width:50%"></div></div><span class="opacity-30" id="gpat-${i}" style="font-size:.5rem">0.00</span></div>`;
+      document.getElementById('gp-axes').innerHTML=ah;gpInit=true;
+    }
+
+    // ── 轴 → 速度 (轴值直接作为百分比，跳过速度条) ──
+    const dz=gpDead;
+    const a0=Math.abs(g.axes[0]||0)>dz?g.axes[0]:0;  // 横移
+    const a1=Math.abs(g.axes[1]||0)>dz?g.axes[1]:0;  // 前后
+    const a2=Math.abs(g.axes[2]||0)>dz?g.axes[2]:0;  // 转向
+    if(a0||a1||a2){
+      gpActive=true;
+      document.getElementById('gp-ind').classList.remove('d-none');
+      // 轴值 × 速度条上限
+      setVel(-a0 * linPct, -a1 * linPct, -a2 * angPct);
+    }else if(gpActive){
+      setVel(0,0,0); gpActive=false;
+      document.getElementById('gp-ind').classList.add('d-none');
+    }
+
+    // ── 按钮 (仅按下沿触发) ──
+    const btn0=!!(g.buttons[0]&&g.buttons[0].pressed);
+    const btn1=!!(g.buttons[1]&&g.buttons[1].pressed);
+    const btn2=!!(g.buttons[2]&&g.buttons[2].pressed);
+    const btn3=!!(g.buttons[3]&&g.buttons[3].pressed);
+    if(btn0&&!gpPrevBtns[0]) setVel(0,0,0);
+    if(btn1&&!gpPrevBtns[1]) callSrv('/emergency_stop');
+    if(btn2&&!gpPrevBtns[2]) toggleLight('front');
+    if(btn3&&!gpPrevBtns[3]) toggleLight('back');
+    gpPrevBtns=[btn0,btn1,btn2,btn3];
+
+    // ── UI 刷新 ──
+    const cur=g.buttons.map(b=>b.pressed?1:0).join('')+'|'+g.axes.map(a=>a.toFixed(2)).join('');
+    if(cur!==gpLastState){
+      gpLastState=cur;
+      for(let i=0;i<g.buttons.length;i++){const el=document.getElementById(`gpb-${i}`);if(el){const p=g.buttons[i].pressed;el.classList.toggle('on',p);el.textContent=`B${i}${g.buttons[i].value>.1?' '+g.buttons[i].value.toFixed(1):''}`;}}
+      for(let i=0;i<g.axes.length;i++){const el=document.getElementById(`gpa-${i}`);if(el){el.style.width=`${(g.axes[i]+1)/2*100}%`;}const tel=document.getElementById(`gpat-${i}`);if(tel)tel.textContent=g.axes[i].toFixed(3);}
+    }
+    requestAnimationFrame(pollGamepad);
+  }
+  pollGamepad();
+
+  function switchTab(name){
+    document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    const tp=document.getElementById('tab-'+name);if(tp)tp.classList.add('active');
+    const btns=document.querySelectorAll('.tab-btn');
+    if(name==='dashboard'&&btns[0])btns[0].classList.add('active');
+    if(name==='map'&&btns[1])btns[1].classList.add('active');
+    if(name==='traj'&&btns[2])btns[2].classList.add('active');
+    if(name==='slam-map'&&btns[3])btns[3].classList.add('active');
+    if(name==='map'&&!window._mapInit)initAmap();
+    if(name==='traj'){updateTrajStats();loadTrajectoryList();}
+    if(name==='slam-map'){refreshMapStatus();loadMapList();}
+  }
+
+  let amap=null,robotMarker=null,waypointMarkers=[],routePolyline=null,gpsCenterMode=true,currentLayer=0;window._mapInit=false;window._prevZoom=17.5;
+  let connectorLine=null;
+  let gpsPathPoints=[],gpsPathLine=null,gpsPathLines=[],gpsRecording=true,lastPathPoint=null,currentGPSSignal='lost';
+  let lastGoodRobotLng=null,lastGoodRobotLat=null;
+  console.log('[WebUI] v2026-06-27-rebuild loaded');
+  const PATH_MIN_DIST=0.5; // 最小记录间距(米)，避免原地漂移堆积
+
+  function initAmap(){window._mapInit=true;const loading=document.getElementById('map-loading'),container=document.getElementById('amap-container');
+    const script=document.createElement('script');script.src='https://webapi.amap.com/maps?v=2.0&key=190ffcf80f0211e860fdda45f03405da&plugin=AMap.Scale,AMap.ToolBar,AMap.Buildings';
+    script.onload=()=>{if(!AMap){loading.textContent='地图加载失败';return;}
+      // 预创建建筑物图层
+      window._buildingsLayer=new AMap.Buildings({zIndex:10,zooms:[16,20]});
+      amap=new AMap.Map('amap-container',{zoom:17.5,center:[116.397428,39.90923],layers:[AMap.createDefaultLayer()],viewMode:'3D',pitch:0,features:['bg','point','road']});
+      amap.addControl(new AMap.Scale());amap.addControl(new AMap.ToolBar({position:'LT'}));
+      amap.on('click',e=>addWaypoint(e.lnglat.getLng(),e.lnglat.getLat()));
+      amap.on('moveend',()=>{const c=amap.getCenter();document.getElementById('map-center').textContent=`${c.getLng().toFixed(6)}, ${c.getLat().toFixed(6)}`;document.getElementById('map-zoom').textContent=amap.getZoom();});
+      const c=amap.getCenter();document.getElementById('map-center').textContent=`${c.getLng().toFixed(6)}, ${c.getLat().toFixed(6)}`;document.getElementById('map-zoom').textContent=amap.getZoom();
+      container.style.display='block';loading.style.display='none';document.getElementById('map-coords').style.display='block';
+      loadSavedPath();
+      };
+    script.onerror=()=>{loading.innerHTML='地图加载失败<br><small>请检查网络</small>';};document.head.appendChild(script);
+  }
+  function addWaypoint(lng,lat){if(!amap)return;const m=new AMap.Marker({position:[lng,lat],label:{content:`${waypointMarkers.length+1}`,offset:new AMap.Pixel(0,-20)}});amap.add(m);waypointMarkers.push({lng,lat,marker:m});updateWaypointList();}
+  function addWaypointAtCenter(){if(!amap)return;const c=amap.getCenter();addWaypoint(c.getLng(),c.getLat());}
+  function clearWaypoints(){if(!amap)return;waypointMarkers.forEach(w=>amap.remove(w.marker));waypointMarkers=[];if(routePolyline){amap.remove(routePolyline);routePolyline=null;}updateWaypointList();}
+  function updateWaypointList(){const list=document.getElementById('waypoint-list');if(waypointMarkers.length===0){list.innerHTML='<div class="text-medium-emphasis text-center py-3" style="font-size:var(--fs-sm)">点击地图或 📍 添加途经点</div>';return;}list.innerHTML=waypointMarkers.map((w,i)=>`<div class="waypoint-item"><span><strong>#${i+1}</strong> <span class="coord">${w.lng.toFixed(5)}, ${w.lat.toFixed(5)}</span></span><button class="btn btn-outline-danger btn-sm" onclick="removeWaypoint(${i})" style="padding:0 6px;">×</button></div>`).join('');}
+  function removeWaypoint(i){if(!amap)return;amap.remove(waypointMarkers[i].marker);waypointMarkers.splice(i,1);waypointMarkers.forEach((w,j)=>w.marker.setLabel({content:`${j+1}`,offset:new AMap.Pixel(0,-20)}));if(routePolyline){amap.remove(routePolyline);routePolyline=null;}updateWaypointList();}
+  function toggleRoute(){if(!amap||waypointMarkers.length<2){alert('至少需要 2 个途经点');return;}if(routePolyline){amap.remove(routePolyline);routePolyline=null;return;}const path=waypointMarkers.map(w=>[w.lng,w.lat]);routePolyline=new AMap.Polyline({path,strokeColor:'#3b82f6',strokeWeight:4,strokeOpacity:.8,strokeStyle:'dashed'});amap.add(routePolyline);amap.setFitView([routePolyline]);}
+  function mapSetLayer(type){
+    if(!amap||!window._buildingsLayer)return;
+    currentLayer=type;
+    [0,1,2].forEach(function(i){
+      var btns=document.querySelectorAll('[onclick="mapSetLayer('+i+')"]');
+      for(var j=0;j<btns.length;j++){
+        btns[j].className='btn btn-sm '+(i===type?'btn-primary':'btn-outline-primary');
+      }
+    });
+    if(type===0){
+      amap.setPitch(0);amap.setRotation(0);amap.setStatus({dragRotate:false});
+      window._buildingsLayer.setMap(null);
+      amap.setLayers([AMap.createDefaultLayer()]);
+      if(window._prevZoom)amap.setZoom(window._prevZoom);
+    }else if(type===1){
+      amap.setPitch(0);amap.setRotation(0);amap.setStatus({dragRotate:false});
+      window._buildingsLayer.setMap(null);
+      amap.setLayers([new AMap.TileLayer.Satellite()]);
+      if(window._prevZoom)amap.setZoom(window._prevZoom);
+    }else{
+      window._prevZoom=amap.getZoom();
+      amap.setZoom(Math.max(amap.getZoom(),17));
+      amap.setPitch(45);amap.setRotation(-45);
+      amap.setStatus({dragRotate:true});
+      amap.setLayers([AMap.createDefaultLayer(),window._buildingsLayer]);
+    }
+  }
+  function mapResetView(){
+    if(!amap)return;
+    if(currentLayer===2){
+      amap.setPitch(45);amap.setRotation(-45);
+    }else{
+      amap.setPitch(0);amap.setRotation(0);
+    }
+    if(robotMarker){
+      try{var p=robotMarker.getPosition();if(p&&isFinite(p.getLng())&&isFinite(p.getLat()))amap.setCenter(p);}catch(e){}
+    }
+    amap.setZoom(17.5);
+  }
+  function toggleGPSCenter(){gpsCenterMode=!gpsCenterMode;const btn=document.getElementById('btn-gps-center');btn.textContent=`GPS居中:${gpsCenterMode?'开':'关'}`;btn.className=`btn btn-sm ${gpsCenterMode?'btn-warning':'btn-outline-warning'}`;}
+  function createRobotMarkerFromPath(){
+    // 无GPS信号时从历史路径末尾创建机器人标记
+    if(robotMarker||!amap||!gpsPathPoints||gpsPathPoints.length===0)return;
+    try{
+      var last=gpsPathPoints[gpsPathPoints.length-1];
+      if(!isFinite(last.lng)||!isFinite(last.lat))return;
+      lastGoodRobotLng=last.lng;lastGoodRobotLat=last.lat;
+      robotMarker=new AMap.Marker({
+        position:[last.lng,last.lat],
+        content:'<div style="width:20px;height:20px;border-radius:50%;background:#f59e0b;border:3px solid #fff;box-shadow:0 0 8px #f59e0b;transform:translate(-50%,-50%)"></div>',
+        offset:new AMap.Pixel(0,0),
+        zIndex:999
+      });
+      // 地图投影可能未初始化完成，延迟添加标记
+      var mk=robotMarker;
+      setTimeout(function(){try{amap.add(mk);console.log('[createRobotMarkerFromPath] amber marker added');}catch(e2){console.error('[createRobotMarkerFromPath] add failed:',e2);}},200);
+    }catch(e){console.error('[createRobotMarkerFromPath] error:',e);}
+  }
+  function updateRobotGPS(lng,lat,heading){
+    if(!amap||!isFinite(lng)||!isFinite(lat))return;
+    try{document.getElementById('gps-status').textContent=`${lng.toFixed(6)}, ${lat.toFixed(6)}${heading!=null?' '+heading.toFixed(1)+'°':''}`;}catch(e){}
+    // 信号丢失时保持最后有效位置，不跳飞
+    if(currentGPSSignal==='lost'){
+      if(lastGoodRobotLng!=null&&robotMarker){robotMarker.setPosition([lastGoodRobotLng,lastGoodRobotLat]);}
+      if(connectorLine){connectorLine.setMap(null);connectorLine=null;}
+      return;
+    }
+    // 距离飞点检测：超过2000m视为无效
+    if(lastGoodRobotLng!=null){
+      const jump=getDistance(lastGoodRobotLng,lastGoodRobotLat,lng,lat);
+      if(jump>2000){console.warn('[GPS] jump rejected:',jump.toFixed(0),'m');return;}
+    }
+    // 只有good信号更新最后有效位置；degraded保持原位
+    if(currentGPSSignal==='good'){
+      lastGoodRobotLng=lng;lastGoodRobotLat=lat;
+    }else{
+      if(lastGoodRobotLng!=null&&robotMarker){robotMarker.setPosition([lastGoodRobotLng,lastGoodRobotLat]);}
+      if(connectorLine){connectorLine.setMap(null);connectorLine=null;}
+      return;
+    }
+    if(!robotMarker){robotMarker=new AMap.Marker({position:[lng,lat],content:'<div style="width:20px;height:20px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 8px #3b82f6;transform:translate(-50%,-50%)"></div>',offset:new AMap.Pixel(0,0),zIndex:999});amap.add(robotMarker);}robotMarker.setPosition([lng,lat]);if(heading!=null)robotMarker.setAngle(heading);if(gpsCenterMode)amap.setCenter([lng,lat]);
+  // ── 路径记录 ──
+  if(gpsRecording){
+    if(currentGPSSignal!=='good'){updateConnectorLine();return;}
+    if(lastPathPoint){
+      const d=getDistance(lastPathPoint.lng,lastPathPoint.lat,lng,lat);
+      if(d<PATH_MIN_DIST)return;
+    }
+    const pt={lng,lat,time:Date.now()};
+    gpsPathPoints.push(pt);lastPathPoint=pt;
+    updatePathLine();savePath();
+    const pc=document.getElementById('path-count');if(pc)pc.textContent=gpsPathPoints.length;
+  }
+}
+  
+
+// ── 路径管理 ──
+function getDistance(lng1,lat1,lng2,lat2){
+  const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+let _connLastLng=0,_connLastLat=0,_connLastTime=0;
+function updateConnectorLine(){
+  if(!amap||gpsPathPoints.length===0||!robotMarker)return;
+  var now=Date.now();
+  if(now-_connLastTime<500)return;
+  var last=gpsPathPoints[gpsPathPoints.length-1];
+  var mpos=robotMarker.getPosition();
+  if(!mpos||!isFinite(mpos.getLng())||!isFinite(mpos.getLat()))return;
+  var d=getDistance(last.lng,last.lat,mpos.getLng(),mpos.getLat());
+  if(d<0.1||d>500)return;
+  if(Math.abs(mpos.getLng()-_connLastLng)<0.00001&&Math.abs(mpos.getLat()-_connLastLat)<0.00001)return;
+  _connLastLng=mpos.getLng();_connLastLat=mpos.getLat();_connLastTime=now;
+  if(!connectorLine){
+    try{connectorLine=new AMap.Polyline({path:[[last.lng,last.lat],[mpos.getLng(),mpos.getLat()]],strokeColor:'rgba(255,255,255,.25)',strokeWeight:2,strokeOpacity:.5,strokeStyle:'dashed',zIndex:140});amap.add(connectorLine);}catch(e){}
+  }else{
+    try{connectorLine.setPath([[last.lng,last.lat],[mpos.getLng(),mpos.getLat()]]);}catch(e){}
+  }
+}
+
+function updatePathLine(){
+  if(!amap)return;
+  if(gpsPathLine){gpsPathLine.setMap(null);gpsPathLine=null;}
+  if(gpsPathPoints.length<2)return;
+  var path=[];
+  for(var i=0;i<gpsPathPoints.length;i++){
+    var p=gpsPathPoints[i];
+    if(isFinite(p.lng)&&isFinite(p.lat))path.push([p.lng,p.lat]);
+  }
+  if(path.length<2)return;
+  gpsPathLine=new AMap.Polyline({path:path,strokeColor:'#22c55e',strokeWeight:4,strokeOpacity:0.85,zIndex:200,lineJoin:'round',lineCap:'round'});
+  amap.add(gpsPathLine);
+}
+function rebuildFullPath(){
+  if(!amap||gpsPathPoints.length<2)return;
+  gpsPathLines.forEach(function(l){l.setMap(null);});gpsPathLines=[];
+  activeSegment=null;
+  gpsPathPoints=gpsPathPoints.filter(function(p){return isFinite(p.lng)&&isFinite(p.lat);});
+  if(gpsPathPoints.length<2){updateConnectorLine();return;}
+  var seg=[gpsPathPoints[0]];
+  for(var i=1;i<gpsPathPoints.length;i++){
+    var prev=gpsPathPoints[i-1],cur=gpsPathPoints[i];
+    if((prev.quality||'good')===(cur.quality||'good')){seg.push(cur);}
+    else{flushSegment(seg);seg=[prev,cur];}
+  }
+  flushSegment(seg);
+  if(gpsPathPoints.length>0){var lp=gpsPathPoints[gpsPathPoints.length-1],q=lp.quality||'good',ll=gpsPathLines[gpsPathLines.length-1],pts=[lp];for(var j=gpsPathPoints.length-2;j>=0;j--){if((gpsPathPoints[j].quality||'good')===q)pts.unshift(gpsPathPoints[j]);else break;}activeSegment={quality:q,points:pts,polyline:ll||null};}
+  updateConnectorLine();
+  function flushSegment(s){
+    if(s.length<2)return;
+    var qq=s[0].quality||'good',ss=QUALITY_STYLES[qq]||QUALITY_STYLES.degraded,path=s.map(function(p){return[p.lng,p.lat];});
+    for(var k=0;k<path.length;k++){if(!isFinite(path[k][0])||!isFinite(path[k][1])){console.error('flushSegment NaN',k);return;}}
+    try{var pl=new AMap.Polyline({path:path,strokeColor:ss.color,strokeWeight:ss.weight,strokeOpacity:ss.opacity,strokeStyle:ss.style,zIndex:140});amap.add(pl);gpsPathLines.push(pl);makeSegClickable(pl,s);}catch(e){console.error('flushSegment',e);}
+  }
+}
+function savePath(){
+  try{localStorage.setItem('m1_gps_path',JSON.stringify(gpsPathPoints));}catch(e){}
+}
+function loadSavedPath(){
+  var st=document.getElementById('path-status');
+  console.log('[loadSavedPath] amap=',!!amap,'__PATH_DATA__=',!!window.__PATH_DATA__);
+  if(window.__PATH_DATA__&&Array.isArray(window.__PATH_DATA__)&&window.__PATH_DATA__.length>0){
+    console.log('[loadSavedPath] using injected data,',window.__PATH_DATA__.length,'points');
+    gpsPathPoints=window.__PATH_DATA__;lastPathPoint=gpsPathPoints[gpsPathPoints.length-1];
+    updatePathLine();
+    createRobotMarkerFromPath();
+    // 居中到机器人/路径末点，缩放17.5，延迟等标记加完
+    setTimeout(function(){
+      if(robotMarker){var p=robotMarker.getPosition();if(p)amap.setZoomAndCenter(17.5,p);}
+      else if(gpsPathLine&&amap){try{var _minLng=Infinity,_minLat=Infinity,_maxLng=-Infinity,_maxLat=-Infinity;for(var _i=0;_i<gpsPathPoints.length;_i++){var _p=gpsPathPoints[_i];if(isFinite(_p.lng)&&isFinite(_p.lat)){if(_p.lng<_minLng)_minLng=_p.lng;if(_p.lng>_maxLng)_maxLng=_p.lng;if(_p.lat<_minLat)_minLat=_p.lat;if(_p.lat>_maxLat)_maxLat=_p.lat;}}if(isFinite(_minLng))amap.setBounds(new AMap.Bounds([_minLng,_minLat],[_maxLng,_maxLat]),false,[60,60,60,60]);}catch(e){}}
+    },300);
+    var pc=document.getElementById('path-count');if(pc)pc.textContent=gpsPathPoints.length;
+    if(st)st.textContent='OK '+gpsPathPoints.length+'点';
+    updateTrajStats();
+    return;
+  }
+  fetch(CTRL_HOST+'/path').then(function(r){return r.json();}).then(function(pts){
+    console.log('[loadSavedPath] fetched',pts?pts.length:0,'points');
+    if(pts&&pts.length){
+      gpsPathPoints=pts;lastPathPoint=pts[pts.length-1];
+      updatePathLine();
+      createRobotMarkerFromPath();
+      setTimeout(function(){
+        if(robotMarker){var p=robotMarker.getPosition();if(p)amap.setZoomAndCenter(17.5,p);}
+        else if(gpsPathLine&&amap){try{var _minLng=Infinity,_minLat=Infinity,_maxLng=-Infinity,_maxLat=-Infinity;for(var _i=0;_i<gpsPathPoints.length;_i++){var _p=gpsPathPoints[_i];if(isFinite(_p.lng)&&isFinite(_p.lat)){if(_p.lng<_minLng)_minLng=_p.lng;if(_p.lng>_maxLng)_maxLng=_p.lng;if(_p.lat<_minLat)_minLat=_p.lat;if(_p.lat>_maxLat)_maxLat=_p.lat;}}if(isFinite(_minLng))amap.setBounds(new AMap.Bounds([_minLng,_minLat],[_maxLng,_maxLat]),false,[60,60,60,60]);}catch(e){}}
+      },300);
+      var pc=document.getElementById('path-count');if(pc)pc.textContent=pts.length;
+      if(st)st.textContent='OK '+pts.length+'点';
+      updateTrajStats();
+    }else{
+      if(st)st.textContent='无数据';
+    }
+  }).catch(function(e){
+    console.error('[loadSavedPath] fetch failed:',e);
+    if(st)st.textContent='加载失败';
+  });
+}
+function toggleRecording(){
+  gpsRecording=!gpsRecording;
+  var btn=document.getElementById('btn-record-path');
+  var badge=document.getElementById('traj-rec-badge');
+  if(gpsRecording){
+    btn.textContent='暂停';btn.className='btn btn-outline-secondary btn-sm';
+    badge.textContent='记录中';badge.style.background='#22c55e33';badge.style.color='#22c55e';
+  }else{
+    btn.textContent='继续';btn.className='btn btn-outline-success btn-sm';
+    badge.textContent='已暂停';badge.style.background='#f59e0b33';badge.style.color='#f59e0b';
+  }
+}
+
+function exportCurrentPath(){
+  if(!gpsPathPoints||gpsPathPoints.length===0){alert('没有路径数据');return;}
+  var lines=gpsPathPoints.map(function(p){
+    var d=new Date(p.time||p.ts||0);
+    var qual=p.quality||'good';
+    return d.toISOString()+','+p.lng.toFixed(8)+','+p.lat.toFixed(8)+','+qual;
+  });
+  var csv='time,lng,lat,quality\\n'+lines.join('\\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='m1_path_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+}
+function exportPath(){ exportCurrentPath(); }
+
+function exportTrajectory(name){
+  fetch(CTRL_HOST+'/trajectory/load?name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){alert('加载失败');return;}
+    fetch(CTRL_HOST+'/path').then(function(r){return r.json();}).then(function(pts){
+      if(!pts||!pts.length){alert('无数据');return;}
+      var lines=pts.map(function(p){
+        var dt=new Date(p.time||p.ts||0);
+        return dt.toISOString()+','+p.lng.toFixed(8)+','+p.lat.toFixed(8)+','+(p.quality||'good');
+      });
+      var csv='time,lng,lat,quality\\n'+lines.join('\\n');
+      var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download=name+'.csv';a.click();URL.revokeObjectURL(a.href);
+    });
+  }).catch(function(e){alert('网络错误: '+e);});
+}
+
+var trajectoryCache=[];
+var trajectoryPreviewLine=null;
+
+function updateTrajStats(){
+  var pts=gpsPathPoints;
+  if(!pts||!pts.length){
+    setText('traj-points','0');setText('traj-dist','0m');setText('traj-dur','0s');
+    setText('traj-good','0');setText('traj-degraded','0');setText('traj-avgspd','0m/s');
+    setText('path-status','等待GPS数据...');
+    return;
+  }
+  var good=0,degraded=0,dist=0;
+  for(var i=0;i<pts.length;i++){if(pts[i].quality==='good')good++;else degraded++;}
+  for(var i=1;i<pts.length;i++){dist+=getDistance(pts[i-1].lng,pts[i-1].lat,pts[i].lng,pts[i].lat);}
+  var dur=pts.length>=2?(pts[pts.length-1].time-pts[0].time)/1000:0;
+  var avgSpd=dur>0?(dist/dur).toFixed(1):'0.0';
+  setText('traj-points',pts.length);
+  setText('traj-dist',dist.toFixed(0)+'m');
+  setText('traj-dur',formatDuration(dur));
+  setText('traj-good',good);
+  setText('traj-degraded',degraded);
+  setText('traj-avgspd',avgSpd+'m/s');
+  setText('path-status','共 '+pts.length+' 点, '+dist.toFixed(0)+'m');
+}
+
+function formatDuration(sec){
+  if(sec<60)return sec.toFixed(0)+'s';
+  if(sec<3600){var m=Math.floor(sec/60);var s=Math.floor(sec%60);return m+'m'+s+'s';}
+  var h=Math.floor(sec/3600);var m=Math.floor((sec%3600)/60);return h+'h'+m+'m';
+}
+function formatTime(ts){var d=new Date(ts);return d.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function setText(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+
+function saveTrajectory(){
+  var name=prompt('存档名称 (留空自动生成时间戳):');
+  if(name===null)return;
+  fetch(CTRL_HOST+'/trajectory/save',{method:'POST',body:JSON.stringify({name:name||''})}).then(function(r){return r.json();}).then(function(d){if(d.ok){alert('已保存: '+d.name);loadTrajectoryList();}else{alert('保存失败: '+(d.error||d));}}).catch(function(e){alert('网络错误: '+e);});
+}
+
+function saveAndNewTrajectory(){
+  var name=prompt('存档名称 (留空自动生成时间戳):');
+  if(name===null)return;
+  fetch(CTRL_HOST+'/trajectory/save',{method:'POST',body:JSON.stringify({name:name||''})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){clearCurrentPath(true);loadTrajectoryList();}else{alert('保存失败: '+(d.error||d));}
+  }).catch(function(e){alert('网络错误: '+e);});
+}
+
+window._trace=function(msg){console.log('[TRACE]',msg,new Date().toISOString());};
+// ── 诊断: 按钮是否可点击 ──
+console.log('[INIT] page loaded, clearCurrentPath=',typeof clearCurrentPath,'loadTrajectory=',typeof loadTrajectory,'amap=',typeof amap,'CTRL_HOST=',CTRL_HOST,'tab-traj visible=',document.getElementById('tab-traj')?.classList?.contains('active'));
+function clearCurrentPath(silent){
+  if(!silent&&!confirm('清除当前轨迹（存档不删）？'))return;
+  console.log('[clearCurrentPath] start, amap=',!!amap,'silent=',silent);
+  var fetchUrl=CTRL_HOST+'/path/clear';
+  console.log('[clearCurrentPath] fetching:',fetchUrl);
+  fetch(fetchUrl,{method:'POST'}).then(function(r){
+    console.log('[clearCurrentPath] response received, status:',r.status,'ok:',r.ok);
+    return r.json();
+  }).then(function(d){
+    console.log('[clearCurrentPath] JSON parsed:',d);
+    if(d.ok){
+      if(gpsRecording) toggleRecording();
+      gpsPathPoints=[];lastPathPoint=null;
+      if(amap){
+        if(gpsPathLine){gpsPathLine.setMap(null);gpsPathLine=null;}
+        gpsPathLines.forEach(function(l){l.setMap(null);});gpsPathLines=[];
+        if(connectorLine){connectorLine.setMap(null);connectorLine=null;}
+      }else{gpsPathLines=[];}
+      activeSegment=null;
+      if(typeof window.__PATH_DATA__!=='undefined')window.__PATH_DATA__=[];
+      updateTrajStats();
+      var pc=document.getElementById('path-count');if(pc)pc.textContent='0';
+      var st=document.getElementById('path-status');if(st)st.textContent='已清除';
+      console.log('[clearCurrentPath] done, local state cleared');
+    }else{
+      console.log('[clearCurrentPath] server returned not ok:',d);
+      alert('清除失败: '+(d.msg||d.error||''));
+    }
+  }).catch(function(e){
+    console.error('[clearCurrentPath] fetch failed:',e);
+    if(gpsRecording) toggleRecording();
+    gpsPathPoints=[];lastPathPoint=null;
+    if(amap){
+      if(gpsPathLine){gpsPathLine.setMap(null);gpsPathLine=null;}
+      gpsPathLines.forEach(function(l){l.setMap(null);});gpsPathLines=[];
+    }else{gpsPathLines=[];}
+    activeSegment=null;
+    updateTrajStats();
+    var pc=document.getElementById('path-count');if(pc)pc.textContent='0';
+    var st=document.getElementById('path-status');if(st)st.textContent='清除失败';
+  });
+}
+function clearPath(){ clearCurrentPath(); }
+
+function loadTrajectoryList(){
+  // 优先使用服务端注入的轨迹数据
+  if(window.__TRAJECTORIES__&&Array.isArray(window.__TRAJECTORIES__)){
+    console.log('[loadTrajectoryList] using injected:',window.__TRAJECTORIES__.length,'trajs');
+    trajectoryCache=window.__TRAJECTORIES__;
+    renderTrajectoryList();
+    return;
+  }
+  fetch(CTRL_HOST+'/trajectories').then(function(r){return r.json();}).then(function(data){
+    trajectoryCache=data||[];
+    renderTrajectoryList();
+  }).catch(function(e){console.error('loadTrajectoryList:',e);});
+}
+
+function renderTrajectoryList(){
+  var data=trajectoryCache;
+  var list=document.getElementById('traj-list');
+  var empty=document.getElementById('traj-list-empty');
+  var search=document.getElementById('traj-search');
+  var q=(search&&search.value||'').toLowerCase();
+  var filtered=data;
+  if(q){filtered=data.filter(function(d){return d.name.toLowerCase().indexOf(q)!==-1;});}
+  var totalDist=0,totalDur=0;
+  for(var i=0;i<data.length;i++){totalDist+=data[i].distance;totalDur+=data[i].duration;}
+  setText('traj-sum-count',data.length);
+  setText('traj-sum-dist',totalDist.toFixed(0)+'m');
+  setText('traj-sum-dur',formatDuration(totalDur));
+  setText('traj-archive-count','('+data.length+')');
+  if(!filtered.length){
+    if(empty){empty.style.display='';list.innerHTML='';list.appendChild(empty);}
+    return;
+  }
+  if(empty)empty.style.display='none';
+  var html='<table class="table table-sm table-dark mb-0" style="font-size:var(--fs-xs)">';
+  html+='<thead><tr><th>名称</th><th>时间</th><th>点数</th><th>距离</th><th>时长</th><th style="min-width:170px">操作</th></tr></thead><tbody>';
+  for(var i=0;i<filtered.length;i++){
+    var d=filtered[i];
+    var qualColor=d.good/(d.points||1)>0.8?'#22c55e':(d.good/(d.points||1)>0.5?'#f59e0b':'#ef4444');
+    html+='<tr>';
+    html+='<td><span style="color:'+qualColor+'">&#9679;</span> '+escHtml(d.name)+(d.error?' <span class="badge bg-danger" style="font-size:.5rem">损坏</span>':'')+'</td>';
+    html+='<td style="font-size:.55rem;opacity:.7">'+formatTime(d.ts)+'</td>';
+    html+='<td>'+d.points+'</td>';
+    html+='<td>'+d.distance+'m</td>';
+    html+='<td>'+formatDuration(d.duration)+'</td>';
+    html+='<td>';
+    html+='<button class="btn btn-outline-primary btn-sm me-1" onclick="loadTrajectory('+escQs(d.name)+')" style="font-size:.5rem;padding:0 3px">加载</button>';
+    html+='<button class="btn btn-outline-info btn-sm me-1" onclick="previewTrajectory('+escQs(d.name)+')" style="font-size:.5rem;padding:0 3px">预览</button>';
+    html+='<button class="btn btn-outline-warning btn-sm me-1" onclick="exportTrajectory('+escQs(d.name)+')" style="font-size:.5rem;padding:0 3px">导出</button>';
+    html+='<button class="btn btn-outline-danger btn-sm" onclick="deleteTrajectory('+escQs(d.name)+')" style="font-size:.5rem;padding:0 3px">删除</button>';
+    html+='</td></tr>';
+  }
+  html+='</tbody></table>';
+  list.innerHTML=html;
+}
+
+function escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function escQs(s){return "'"+s.replace(/'/g,"\\'").replace(/"/g,'\\"')+"'";}
+
+function previewTrajectory(name){
+  fetch(CTRL_HOST+'/trajectory/load?name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){alert('加载失败');return;}
+    fetch(CTRL_HOST+'/path').then(function(r){return r.json();}).then(function(pts){
+      if(!pts||!pts.length){alert('无数据');return;}
+      if(trajectoryPreviewLine){trajectoryPreviewLine.setMap(null);trajectoryPreviewLine=null;}
+      var path=pts.map(function(p){return [p.lng,p.lat];});
+      trajectoryPreviewLine=new AMap.Polyline({path:path,strokeColor:'#a78bfa',strokeWeight:4,strokeOpacity:0.7,strokeStyle:'dashed',showDir:true,zIndex:140});
+      amap.add(trajectoryPreviewLine);
+      amap.setFitView([trajectoryPreviewLine],false,[60,60,60,60]);
+      alert('预览: '+name+' ('+pts.length+'点) - 15秒后自动消失');
+      setTimeout(function(){
+        if(trajectoryPreviewLine){trajectoryPreviewLine.setMap(null);trajectoryPreviewLine=null;}
+        if(gpsPathLine)amap.add(gpsPathLine);
+      },15000);
+    });
+  }).catch(function(e){alert('网络错误: '+e);});
+}
+
+function loadTrajectory(name){
+  if(!confirm('加载存档 '+name+' 将覆盖当前轨迹，确定?'))return;
+  fetch(CTRL_HOST+'/trajectory/load?name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){alert('加载失败');return;}
+    console.log('[loadTrajectory] loaded, setting __PATH_DATA__=null');
+    window.__PATH_DATA__=null;
+    window.__TRAJECTORIES__=null;
+    switchTab('map');
+    loadSavedPath();
+  }).catch(function(e){console.error('[loadTrajectory] network error:',e);alert('网络错误');});
+}
+
+function deleteTrajectory(name){
+  if(!confirm('删除存档 '+name+'?'))return;
+  fetch(CTRL_HOST+'/trajectory/delete',{method:'POST',body:JSON.stringify({name:name})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){loadTrajectoryList();}else{alert('删除失败');}
+  }).catch(function(e){alert('网络错误');});
+}
+
+function deleteAllTrajectories(){
+  if(!trajectoryCache||!trajectoryCache.length){alert('没有存档');return;}
+  if(!confirm('确定删除全部 '+trajectoryCache.length+' 个存档？此操作不可恢复！'))return;
+  var names=trajectoryCache.map(function(d){return d.name;});
+  var done=0;
+  function delNext(){
+    if(done>=names.length){loadTrajectoryList();return;}
+    fetch(CTRL_HOST+'/trajectory/delete',{method:'POST',body:JSON.stringify({name:names[done]})}).then(function(){done++;delNext();}).catch(function(){done++;delNext();});
+  }
+  delNext();
+}
+
+// ═══ 地图管理 ═══
+var mapCache=[];
+
+function saveSLAMMap(){
+  var flRunning=document.getElementById('proc-fastlio')?.textContent?.includes('✅');
+  if(!flRunning){alert('FAST-LIO 未运行，无法保存地图');return;}
+  var customName=document.getElementById('map-save-name')?.value?.trim();
+  var body=customName?JSON.stringify({name:customName}):'{}';
+  fetch(CTRL_HOST+'/map/save',{method:'POST',body:body}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      alert('地图已保存: '+d.name);
+      document.getElementById('map-save-badge').style.display='inline';
+      setTimeout(function(){document.getElementById('map-save-badge').style.display='none';},3000);
+      loadMapList();
+    } else {
+      alert('保存失败: '+(d.error||'未知错误'));
+    }
+  }).catch(function(e){alert('网络错误: '+e);});
+}
+
+function refreshMapStatus(){
+  fetch(CTRL_HOST+'/status').then(function(r){return r.json();}).then(function(d){
+    var fl=d['fastlio']?.running||false;
+    document.getElementById('map-fl-status').textContent=fl?'✅ 运行中':'❌ 未运行';
+    var btn2=document.getElementById('btn-map-save2');
+    if(btn2)btn2.disabled=!fl;
+  });
+}
+
+function loadMapList(){
+  fetch(CTRL_HOST+'/maps').then(function(r){return r.json();}).then(function(maps){
+    mapCache=maps||[];
+    renderMapList();
+  }).catch(function(e){console.error('loadMapList error:',e);});
+}
+
+function renderMapList(){
+  var container=document.getElementById('map-list');
+  var countEl=document.getElementById('map-archive-count');
+  if(!container)return;
+  
+  if(!mapCache||!mapCache.length){
+    container.innerHTML='<div id="map-list-empty" class="text-center text-muted py-4">暂无保存的地图</div>';
+    if(countEl)countEl.textContent='';
+    return;
+  }
+  
+  if(countEl)countEl.textContent='('+mapCache.length+' 个)';
+  
+  var html='';
+  for(var i=0;i<mapCache.length;i++){
+    var m=mapCache[i];
+    html+='<div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid rgba(255,255,255,.05)">';
+    html+='<div><div style="font-weight:500">'+m.name+'</div><div style="font-size:var(--fs-xs);color:rgba(255,255,255,.4)">'+m.size_mb+' MB ∙ '+m.date+'</div></div>';
+    html+='<div class="d-flex gap-1">';
+    html+='<button class="btn btn-outline-danger btn-sm" style="font-size:var(--fs-xs)" onclick="deleteMap(\''+m.name+'\')">🗑</button>';
+    html+='</div></div>';
+  }
+  container.innerHTML=html;
+}
+
+function deleteMap(name){
+  if(!confirm('确定删除地图 '+name+' ？'))return;
+  fetch(CTRL_HOST+'/map/delete',{method:'POST',body:JSON.stringify({name:name})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      mapCache=mapCache.filter(function(m){return m.name!==name;});
+      renderMapList();
+    } else {
+      alert('删除失败');
+    }
+  }).catch(function(e){alert('网络错误: '+e);});
+}
+
+</script>
+</body>
+</html>

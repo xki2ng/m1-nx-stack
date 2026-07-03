@@ -1,0 +1,86 @@
+/**:
+  ros__parameters:
+    # Voxel settings
+    voxel_size: 0.1                    # meters per voxel
+    truncation_distance_vox: 4.0       # truncation distance in voxels
+    max_integration_distance: 20.0     # max distance to integrate points (meters)
+    lidar_hole_filling_radius: 1
+    voxel_color_mode: "height" #flat/height
+    voxel_flat_color: [0.6, 1.0, 0.0]
+    lidar_denoise_enable: false
+    lidar_smooth_enable: false 
+    lidar_smooth_radius: 0.5
+
+
+    # Lidar parameters (for Ouster OS0/OS1 32-beam)
+    lidar_vertical_fov_deg: 45.0       # vertical field of view
+    lidar_num_azimuth: 1800            # horizontal resolution
+    lidar_num_elevation: 96            # number of beams
+    
+    # Update rates
+    mesh_update_rate_hz: 2.0           # how often to update mesh
+    esdf_update_rate_hz: 2.0           # how often to update ESDF
+    
+    # Topics
+    pointcloud_topic: "/cloud_registered"  # FAST-LIO registered cloud
+    odom_topic: "/Odometry"                # FAST-LIO odometry
+
+    # Export / persistence
+    voxel_export_path: "/tmp/nvblox_voxels.pcd"  # target path for save service
+    voxel_export_surface_band: 0.08        # meters around surface to keep voxels
+    voxel_export_min_weight: 0.2           # minimum TSDF weight
+    voxel_export_surface_only: true        # true = thin shell, false = filled volume
+    voxel_export_points_per_side: 1        # >1 duplicates samples inside each voxel when exporting
+    publish_voxel_points: false            # publish PointCloud2 for solid RViz view
+    voxel_marker_alpha: 1.0                # opacity for cube markers
+    
+    # Frame
+    frame_id: "odom"
+    
+    # Visualization
+    publish_mesh: true
+    publish_esdf_slice: true
+    esdf_mode: "2d"               # 2d publishes a thin slice, 3d keeps the full vertical band
+    esdf_slice_height: 0.5             # height of ESDF slice (meters)
+
+    # Mapper tuning (matches Isaac ROS nvblox parameters)
+    mapper:
+      esdf_integrator_max_distance_m: 3.0
+      esdf_slice_min_height: -1.0
+      esdf_slice_max_height: 2.0
+      esdf_slice_height: 0.5
+      slice_height_thickness_m: 0.25
+      slice_height_above_plane_m: 0.0
+      projective_integrator_max_integration_distance_m: 20.0
+      lidar_projective_integrator_max_integration_distance_m: 20.0
+      projective_integrator_truncation_distance_vox: 4.0
+      projective_integrator_weighting_mode: inverse_square
+      projective_integrator_max_weight: 5.0
+      mesh_integrator_min_weight: 0.001
+      mesh_integrator_weld_vertices: true
+      tsdf_decay_factor: 0.95
+      tsdf_decayed_weight_threshold: 0.001
+      tsdf_set_free_distance_on_decayed: false
+      tsdf_decayed_free_distance_vox: 4.0
+      decay_integrator_deallocate_decayed_blocks: true
+      free_region_decay_probability: 0.6
+      occupied_region_decay_probability: 0.4
+      occupancy_decay_to_free: false
+      free_region_occupancy_probability: 0.3
+      occupied_region_occupancy_probability: 0.7
+      unobserved_region_occupancy_probability: 0.5
+      occupied_region_half_width_m: 0.15
+      max_tsdf_distance_for_occupancy_m: 0.15
+      max_unobserved_to_keep_consecutive_occupancy_ms: 200.0
+      min_duration_since_occupied_for_freespace_ms: 1000.0
+      min_consecutive_occupancy_duration_for_reset_ms: 2000.0
+      check_neighborhood: true
+      initialize_to_high_confidence_freespace: false
+      raycast_subsampling_factor: 1
+      workspace_bounds_type: unbounded
+      workspace_bounds_min_height_m: -2.0
+      workspace_bounds_max_height_m: 3.0
+      workspace_bounds_min_corner_x_m: -5.0
+      workspace_bounds_max_corner_x_m: 5.0
+      workspace_bounds_min_corner_y_m: -5.0
+      workspace_bounds_max_corner_y_m: 5.0

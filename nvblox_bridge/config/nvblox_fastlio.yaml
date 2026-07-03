@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    # Voxel settings
+    voxel_size: 0.1                    # meters per voxel
+    truncation_distance_vox: 4.0       # truncation distance in voxels
+    max_integration_distance: 20.0     # max distance to integrate points (meters)
+    
+    # Lidar parameters (for Ouster OS0/OS1 32-beam)
+    lidar_vertical_fov_deg: 90.0       # vertical field of view
+    lidar_num_azimuth: 1024            # horizontal resolution
+    lidar_num_elevation: 32            # number of beams
+    
+    # Update rates
+    mesh_update_rate_hz: 1.0           # how often to update mesh
+    esdf_update_rate_hz: 2.0           # how often to update ESDF
+    
+    # Topics
+    pointcloud_topic: "/cloud_registered"  # FAST-LIO registered cloud
+    odom_topic: "/Odometry"                # FAST-LIO odometry
+
+    # Export / persistence
+    voxel_export_path: "/tmp/nvblox_voxels.pcd"  # target path for save service
+    voxel_export_surface_band: 0.08        # meters around surface to keep voxels
+    voxel_export_min_weight: 0.2           # minimum TSDF weight
+    voxel_export_surface_only: true        # true = thin shell, false = filled volume
+    voxel_export_points_per_side: 1        # >1 duplicates samples inside each voxel when exporting
+    publish_voxel_points: false            # publish PointCloud2 for solid RViz view
+    voxel_marker_alpha: 1.0                # opacity for cube markers
+    
+    # Frame
+    frame_id: "map"
+    
+    # Visualization
+    publish_mesh: true
+    publish_esdf_slice: true
+    esdf_slice_height: 0.5             # height of ESDF slice (meters)
