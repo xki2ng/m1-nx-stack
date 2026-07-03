@@ -261,6 +261,59 @@ def save_map(custom_name=""):
     return True, ts
 
 
+def load_map(name):
+    """设置 FAST-LIO 加载地图进行定位（不建图）"""
+    # 找到地图文件（支持 db3 目录和 pcd 文件）
+    map_path = None
+    bag_dir = os.path.join(MAP_DIR, name)
+    pcd_path = os.path.join(MAP_DIR, f"{name}.pcd")
+
+    if os.path.isdir(bag_dir):
+        # ros2 bag 目录 — 转换为 PCD
+        db3_files = [f for f in os.listdir(bag_dir) if f.endswith('.db3')]
+        if db3_files:
+            # 用 ros2 bag play 提取
+            env = os.environ.copy()
+            env["RMW_IMPLEMENTATION"] = "rmw_zenoh_cpp"
+            env["ROS_DOMAIN_ID"] = "66"
+            try:
+                # 录制方式: ros2 bag play + 同时保存为 pcd
+                import subprocess as sp
+                sp.run(["bash", "-c",
+                    f"source /opt/runtime/env.bash && "
+                    f"ros2 bag play {bag_dir} --topics /Laser_map -r 10 --read-ahead-queue-size 2000 2>/dev/null"],
+                    env=env, timeout=10)
+            except:
+                pass
+            # 检查是否有新生成的 pcd
+            if os.path.exists(pcd_path):
+                map_path = pcd_path
+    elif os.path.exists(pcd_path):
+        map_path = pcd_path
+
+    if not map_path:
+        return False, "地图文件未找到"
+
+    # 更新 FAST-LIO 配置
+    try:
+        yaml_path = os.path.expanduser("~/fastlio/m1_airy96_rot.yaml")
+        lines = []
+        with open(yaml_path) as f:
+            for line in f:
+                if line.strip().startswith("map_file_path:"):
+                    lines.append(f'        map_file_path: "{map_path}"\n')
+                elif line.strip().startswith("localization_mode:"):
+                    lines.append("        localization_mode: true\n")
+                else:
+                    lines.append(line)
+        with open(yaml_path, "w") as f:
+            f.writelines(lines)
+        subprocess.run(["pkill", "-9", "-f", "fastlio_mapping"], capture_output=True)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
 def delete_map(name):
     # 尝试删 PCD
     fpath_pcd = os.path.join(MAP_DIR, f"{name}.pcd")
@@ -382,6 +435,11 @@ class Handler(BaseHTTPRequestHandler):
             stop_nvblox(); self._json({"ok":True})
 
         # ── 地图管理 ──
+        elif path == "/map/load":
+            parsed = urlparse(self.path)
+            name = parse_qs(parsed.query).get("name", [""])[0]
+            ok, msg = load_map(name)
+            self._json({"ok":ok,"error":"" if ok else msg})
         elif path == "/map/save":
             length = int(self.headers.get("Content-Length",0))
             body = json.loads(self.rfile.read(length)) if length>0 else {}

@@ -81,7 +81,7 @@ double kdtree_incremental_time = 0.0, kdtree_search_time = 0.0, kdtree_delete_ti
 double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot4[MAXN], s_plot5[MAXN], s_plot6[MAXN], s_plot7[MAXN], s_plot8[MAXN], s_plot9[MAXN], s_plot10[MAXN], s_plot11[MAXN];
 double match_time = 0, solve_time = 0, solve_const_H_time = 0;
 int    kdtree_size_st = 0, kdtree_size_end = 0, add_point_size = 0, kdtree_delete_counter = 0;
-bool   runtime_pos_log = false, pcd_save_en = false, time_sync_en = false, extrinsic_est_en = true, path_en = true;
+bool   runtime_pos_log = false, pcd_save_en = false, time_sync_en = false, extrinsic_est_en = true, path_en = true, localization_mode = false;
 /**************************/
 
 float res_last[100000] = {0.0};
@@ -857,6 +857,7 @@ public:
         this->declare_parameter<bool>("publish.scan_bodyframe_pub_en", true);
         this->declare_parameter<int>("max_iteration", 4);
         this->declare_parameter<string>("map_file_path", "");
+        this->declare_parameter<bool>("localization_mode", false);
         this->declare_parameter<string>("common.lid_topic", "/livox/lidar");
         this->declare_parameter<string>("common.imu_topic", "/livox/imu");
         this->declare_parameter<bool>("common.time_sync_en", false);
@@ -921,6 +922,7 @@ public:
         this->get_parameter_or<bool>("mapping.extrinsic_est_en", extrinsic_est_en, true);
         this->get_parameter_or<bool>("pcd_save.pcd_save_en", pcd_save_en, false);
         this->get_parameter_or<int>("pcd_save.interval", pcd_save_interval, -1);
+        this->get_parameter_or<bool>("localization_mode", localization_mode, false);
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
         this->get_parameter_or<string>("frames.map_frame", map_frame_id, map_frame_id);
@@ -1137,6 +1139,18 @@ private:
             if(ikdtree.Root_Node == nullptr)
             {
                 RCLCPP_INFO(this->get_logger(), "Initialize the map kdtree");
+                if (localization_mode && !map_file_path.empty())
+                {
+                    pcl::PointCloud<PointType> map_cloud;
+                    if (pcl::io::loadPCDFile(map_file_path, map_cloud) != -1)
+                    {
+                        ikdtree.set_downsample_param(filter_size_map_min);
+                        ikdtree.Build(map_cloud.points);
+                        RCLCPP_INFO(this->get_logger(), "Map loaded: %ld pts (localization mode)", map_cloud.size());
+                        return;
+                    }
+                    RCLCPP_WARN(this->get_logger(), "Failed to load map: %s", map_file_path.c_str());
+                }
                 if(feats_down_size > 5)
                 {
                     ikdtree.set_downsample_param(filter_size_map_min);
@@ -1202,7 +1216,7 @@ private:
 
             /*** add the feature points to map kdtree ***/
             t3 = omp_get_wtime();
-            map_incremental();
+            if (!localization_mode) map_incremental();
             t5 = omp_get_wtime();
             
             /******* Publish points *******/
