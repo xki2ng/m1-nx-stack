@@ -1456,14 +1456,10 @@ function saveSLAMMap(){
   if(!flRunning){alert('FAST-LIO 未运行，无法保存地图');return;}
   var customName=document.getElementById('map-save-name')?.value?.trim();
   var body=customName?JSON.stringify({name:customName}):'{}';
+  alert('地图后台保存中，约5秒后可在列表刷新查看');
   fetch(CTRL_HOST+'/map/save',{method:'POST',body:body}).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      alert('地图已保存: '+d.name);
-      document.getElementById('map-save-badge').style.display='inline';
-      setTimeout(function(){document.getElementById('map-save-badge').style.display='none';},3000);
-      loadMapList();
-    } else {
-      alert('保存失败: '+(d.error||'未知错误'));
+      setTimeout(function(){loadMapList();},3000);
     }
   }).catch(function(e){alert('网络错误: '+e);});
 }
